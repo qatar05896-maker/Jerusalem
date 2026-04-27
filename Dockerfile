@@ -1,6 +1,6 @@
 FROM python:3.11
 
-# تحديث النظام وتثبيت الحزم الأساسية (git و curl)
+# تحديث النظام وتثبيت الحزم الأساسية
 RUN apt-get update && apt-get install -y git curl
 
 # سحب ملفات البوت
@@ -13,6 +13,9 @@ WORKDIR /root/repthon
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 RUN npm i -g npm
+
+# تعديل إصدار المكتبة ليكون 2.2.8 بناءً على طلبك
+RUN sed -i 's/py-tgcalls==1.0.1/py-tgcalls==2.2.8/g' requirements.txt
 
 # تثبيت متطلبات البايثون
 RUN pip3 install --no-cache-dir -r requirements.txt
