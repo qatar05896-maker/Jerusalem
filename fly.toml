@@ -1,23 +1,20 @@
-# fly.toml app configuration file generated for jerusalem on 2026-04-27T22:57:21Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml app configuration file generated for jerusalem
 
 app = 'jerusalem'
-primary_region = 'iad'
+primary_region = 'fra' # تم تغييرها إلى fra لتكون بجانب قاعدة البيانات وتقليل اللاج
 
 [build]
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = false    # تم التعطيل لضمان عدم توقف الماشين أبداً
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1      # ضمان وجود نسخة واحدة على الأقل تعمل دائماً
   processes = ['app']
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-  memory_mb = 1024
+  size = 'performance-8x'       # هذا الحجم مخصص للأداء العالي ويدعم 8 أنوية
+  cpus = 8
+  cpu_kind = 'performance'      # استخدام المعالجات القوية بدلاً من الـ shared
+  memory = '40gb'               # تخصيص 40 جيجا رام بالظبط
