@@ -51,7 +51,6 @@ python-dotenv
 pyTelegramBotAPI
 pytz
 pyquery
-py-tgcalls>=2.2.8
 qrcode
 randomstuff.py
 regex
