@@ -19,13 +19,12 @@ LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
 plugin_category = "الـبـحـث"
 extractor = URLExtract()
 
-# تـحـديـد مـسـارات الـعـمـل والـكـوكـيـز بـشـكـل مـطـلـق
+# تـحـديـد مـسـارات الـعـمـل بـشـكـل مـطـلـق لـتـفـادي مـشـاكـل Fly.io
 TEMP_DIR = os.path.join(os.getcwd(), "repthon", "temp_downloads")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# الـمـسـار الـمـطـلـق لـلـكـوكـيـز لـضـمـان الـعـمـل عـلـى Fly.io
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-COOKIES_PATH = os.path.join(CURRENT_DIR, "cookies.txt")
+# الـمـسـار الـمـطـلـق لـلـكـوكـيـز كـمـا نـجـح فـي الـتـيـرمـنـال بـالـضـبـط
+COOKIES_PATH = "/root/repthon/repthon/plugins/cookies.txt"
 
 def get_ytdlp_options(is_audio=False):
     """إعـدادات الـتـحـمـيـل الـقـصـوى بـنـاءً عـلـى تـجـارب الـكـونـسـول الـنـاجـحـة"""
@@ -43,14 +42,14 @@ def get_ytdlp_options(is_audio=False):
         "force_ipv4": True,
         "source_address": "0.0.0.0",
         
-        # الـاعـتـمـاد عـلـى عـمـيـل الـوِيـب لـضـمـان تـوافـق الـكـوكـيـز
+        # تـصـحـيـح طـريـقـة إرسـال الـعـمـيـل فـي بـايـثـون لـيـقـرأهـا yt-dlp بـنـجـاح
         "extractor_args": {
-            "youtube": ["player_client=web"]
+            "youtube": {"player_client": ["web"]}
         },
         
         # فـرض اسـتـخـدام نـود لـفـك الـتـشـفـيـر والـتـحـديـات
         "js_runtime": "node",
-        "remote_components": ["ejs:github"],
+        "remote_components": "ejs:github",
         
         # الـتـحـمـيـل الـمـتـوازي الـصـاروخـي (8 خـطـوط)
         "concurrent_fragment_downloads": 8,
@@ -64,9 +63,11 @@ def get_ytdlp_options(is_audio=False):
             "preferredquality": "320",
         }]
     
-    # قـراءة مـلـف الـكـوكـيـز إذا كـان مـتـوفـراً
+    # قـراءة مـلـف الـكـوكـيـز لـتـخـطـي حـظـر "Sign in"
     if os.path.exists(COOKIES_PATH):
         opts["cookiefile"] = COOKIES_PATH
+    else:
+        LOGS.warning(f"⚠️ مـلـف الـكـوكـيـز غـيـر مـوجـود فـي: {COOKIES_PATH}")
         
     return opts
 
@@ -77,6 +78,7 @@ async def run_ytdlp(url, is_audio=False):
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
             if is_audio:
+                # تـحـديـد الامـتـداد الـجـديـد بـعـد الـمـعـالـجـة لـلـصـوت
                 filename = filename.rsplit(".", 1)[0] + ".mp3"
             return filename, info
 
@@ -85,14 +87,13 @@ async def run_ytdlp(url, is_audio=False):
 
 
 # =========================================================
-# أوامــر تـحـمـيـل الـفـيـديـو (يـوتـيـوب، فـيـس، تـيـك، انـسـتـا، الـخ)
+# أوامــر تـحـمـيـل الـفـيـديـو
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="(تحميل فيديو|فيس|انستا|سناب|تيك|بنترست|فيسبوك)(?:\s|$)([\s\S]*)",
     command=("تـحـمـيـل فـي_ديـو", plugin_category)
 )
 async def universal_video_downloader(event):
-    """تـحـمـيـل الـفـيـديـو بـأحـدث الـتـقـنـيـات والـسـرعـة الـقـصـوى"""
     msg = event.pattern_match.group(2)
     rmsg = await event.get_reply_message()
     if not msg and rmsg:
@@ -130,14 +131,13 @@ async def universal_video_downloader(event):
 
 
 # =========================================================
-# أوامــر تـحـمـيـل الـصـوت الـشـامـلـة (MP3)
+# أوامــر تـحـمـيـل الـصـوت (MP3)
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="(تحميل صوت|ساوند)(?:\s|$)([\s\S]*)",
     command=("تـحـمـيـل صـوت", plugin_category)
 )
 async def universal_audio_downloader(event):
-    """تـحـمـيـل واسـتـخـراج الـصـوت بـأعـلـى جـودة مـمـكـنـة"""
     msg = event.pattern_match.group(2)
     rmsg = await event.get_reply_message()
     if not msg and rmsg:
@@ -178,14 +178,13 @@ async def universal_audio_downloader(event):
 
 
 # =========================================================
-# أداة الـبـحـث الـذكـي فـي يـوتـيـوب
+# أداة الـبـحـث فـي يـوتـيـوب
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="يوتيوب(?: |$)(\d*)? ?([\s\S]*)",
     command=("يـوتـيـوب", plugin_category)
 )
 async def yt_search(event):
-    """الـبـحـث فـي يـوتـيـوب واسـتـخـراج الـنـتـائـج كـروابـط"""
     query = event.pattern_match.group(2) or (await event.get_reply_message() and (await event.get_reply_message()).text)
         
     if not query:
