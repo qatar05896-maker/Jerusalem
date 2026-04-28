@@ -5,19 +5,20 @@
 
 import asyncio
 import os
-import time
+import re
 from telethon.tl import types
 import yt_dlp
-from urlextract import URLExtract
 
 from ..Config import Config
 from ..core.logger import logging
 from ..core.managers import edit_delete, edit_or_reply
-from . import zq_lo
+from repthon import zq_lo # تم تصحيح الاستدعاء
 
 LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
 plugin_category = "الـبـحـث"
-extractor = URLExtract()
+
+# استخدام Regex بدلاً من مكتبة urlextract لتفادي انهيار السيرفر
+URL_REGEX = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
 
 # تـحـديـد مـسـارات الـعـمـل بـشـكـل مـطـلـق لـتـفـادي مـشـاكـل Fly.io
 TEMP_DIR = os.path.join(os.getcwd(), "repthon", "temp_downloads")
@@ -29,7 +30,7 @@ COOKIES_PATH = "/root/repthon/repthon/plugins/cookies.txt"
 def get_ytdlp_options(is_audio=False):
     """إعـدادات الـتـحـمـيـل الـقـصـوى بـنـاءً عـلـى تـجـارب الـكـونـسـول الـنـاجـحـة"""
     opts = {
-        "format": "bestaudio/best" if is_audio else "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "format": "bestaudio[ext=m4a]/bestaudio" if is_audio else "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "outtmpl": os.path.join(TEMP_DIR, "%(title)s.%(ext)s"),
         "geo_bypass": True,
         "nocheckcertificate": True,
@@ -47,21 +48,10 @@ def get_ytdlp_options(is_audio=False):
             "youtube": {"player_client": ["web"]}
         },
         
-        # فـرض اسـتـخـدام نـود لـفـك الـتـشـفـيـر والـتـحـديـات
-        "js_runtime": "node",
-        "remote_components": "ejs:github",
-        
         # الـتـحـمـيـل الـمـتـوازي الـصـاروخـي (8 خـطـوط)
         "concurrent_fragment_downloads": 8,
         "http_chunk_size": 10485760, # 10 مـيـجـا لـكـل خـط لـتـسـريـع الـتـجـمـيـع
     }
-    
-    if is_audio:
-        opts["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "320",
-        }]
     
     # قـراءة مـلـف الـكـوكـيـز لـتـخـطـي حـظـر "Sign in"
     if os.path.exists(COOKIES_PATH):
@@ -77,9 +67,6 @@ async def run_ytdlp(url, is_audio=False):
         with yt_dlp.YoutubeDL(get_ytdlp_options(is_audio)) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            if is_audio:
-                # تـحـديـد الامـتـداد الـجـديـد بـعـد الـمـعـالـجـة لـلـصـوت
-                filename = filename.rsplit(".", 1)[0] + ".mp3"
             return filename, info
 
     loop = asyncio.get_event_loop()
@@ -99,7 +86,7 @@ async def universal_video_downloader(event):
     if not msg and rmsg:
         msg = rmsg.text
         
-    urls = extractor.find_urls(msg)
+    urls = URL_REGEX.findall(msg)
     if not urls:
         return await edit_or_reply(event, "**⤶ يـرجـى وضـع رابـط صـحـيـح لـلـتـحـمـيـل 🔗**")
         
@@ -131,7 +118,7 @@ async def universal_video_downloader(event):
 
 
 # =========================================================
-# أوامــر تـحـمـيـل الـصـوت (MP3)
+# أوامــر تـحـمـيـل الـصـوت
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="(تحميل صوت|ساوند)(?:\s|$)([\s\S]*)",
@@ -143,7 +130,7 @@ async def universal_audio_downloader(event):
     if not msg and rmsg:
         msg = rmsg.text
         
-    urls = extractor.find_urls(msg)
+    urls = URL_REGEX.findall(msg)
     if not urls:
         return await edit_or_reply(event, "**⤶ يـرجـى وضـع رابـط صـحـيـح لـلـتـحـمـيـل 🔗**")
         
@@ -185,7 +172,10 @@ async def universal_audio_downloader(event):
     command=("يـوتـيـوب", plugin_category)
 )
 async def yt_search(event):
-    query = event.pattern_match.group(2) or (await event.get_reply_message() and (await event.get_reply_message()).text)
+    query = event.pattern_match.group(2)
+    rmsg = await event.get_reply_message()
+    if not query and rmsg:
+        query = rmsg.text
         
     if not query:
         return await edit_or_reply(event, "**⤶ يـرجـى كـتـابـة كـلـمـة لـلـبـحث أو الـرد عـلـى نـص**")
