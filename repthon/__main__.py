@@ -14,7 +14,7 @@ from .utils import (
     verifyLoggerGroup,
 )
 
-LOGS = logging.getLogger("𝐑𝐞𝐩𝐭𝐡𝐨𝐧")
+LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
 
 print(repthon.__copyright__)
 print(f"المرخصة بموجب شروط  {repthon.__license__}")
@@ -30,15 +30,15 @@ except Exception as e:
     sys.exit()
 
 if not Config.ALIVE_NAME:
-    try: #Code by T.me/E_7_V
+    try: #Code by T.me/S_G0C7
         LOGS.info("⌭ بـدء إضافة الاسـم التلقـائـي ⌭")
         zq_lo.loop.run_until_complete(autoname())
         LOGS.info("✓ تـم إضافة فار الاسـم .. بـنجـاح ✓")
     except Exception as e:
         LOGS.error(f"- {e}")
 
-try: #Code by T.me/E_7_V
-    LOGS.info("⌭ بـدء تنزيـل ريبـــثون ⌭")
+try: #Code by T.me/S_G0C7
+    LOGS.info("⌭ بـدء تنزيـل فـيـنــــوم ⌭")
     zq_lo.loop.run_until_complete(setup_bot())
     LOGS.info("⌭ بـدء تشغيل البـوت ⌭")
 except Exception as e:
@@ -59,17 +59,16 @@ except Exception as e:
     LOGS.error(f"- {e}")
 
 
-
 async def startup_process():
     await verifyLoggerGroup()
     await load_plugins("plugins")
     await load_plugins("assistant")
-    print("➖➖➖➖➖ 𝐑𝐞𝐩𝐭𝐡𝐨𝐧™ ➖➖➖➖➖")
+    print("➖➖➖➖➖ 𝙑𝙚𝙣𝙤𝙢™ ➖➖➖➖➖")
     print("تـم التنصـيب .. بنجـاح ✓")
     print(
-        f"⌔┊تـم تنصيـب ريبثون يـوزربـوت . . بنجـاح 🧸♥️ \n\n⌔┊تحيـاتي ..  روجر\n⌔┊قنـاة السـورس ↶.\n🌐┊@Repthon"
+        f"⌔┊تـم تنصيـب فـيـنــــوم يـوزربـوت . . بنجـاح 🧸♥️ \n\n⌔┊تحيـاتي ..  بـودا\n⌔┊قنـاة السـورس ↶.\n🌐┊@SourceBoda"
     )
-    print("➖➖➖➖➖ 𝐑𝐞𝐩𝐭𝐡𝐨𝐧™ ➖➖➖➖➖")
+    print("➖➖➖➖➖ 𝙑𝙚𝙣𝙤𝙢™ ➖➖➖➖➖")
     await verifyLoggerGroup()
     await add_bot_to_logger_group(BOTLOG_CHATID)
     if PM_LOGGER_GROUP_ID != -100:
