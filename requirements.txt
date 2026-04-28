@@ -79,3 +79,4 @@ yt-dlp
 youtube_dl
 git+https://github.com/buddhhu/img2html.git
 git+https://github.com/sandy1709/py-googletrans
+ntgcalls
