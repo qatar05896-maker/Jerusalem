@@ -1,9 +1,3 @@
-# الاستدعاء الآمن لمكتبة الفيديوهات لتجنب الكراش على أي إصدار
-try:
-    from moviepy import VideoFileClip
-except ImportError:
-    from moviepy.editor import VideoFileClip
-
 from telethon.tl.functions.channels import (
     CreateChannelRequest,
     EditPhotoRequest,
