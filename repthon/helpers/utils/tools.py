@@ -1,7 +1,12 @@
 import os
 from typing import Optional
 
-from moviepy.editor import VideoFileClip
+# التعديل الأول: استدعاء آمن لمكتبة الفيديوهات لتعمل على كل الإصدارات
+try:
+    from moviepy import VideoFileClip
+except ImportError:
+    from moviepy.editor import VideoFileClip
+
 from PIL import Image
 
 from ...core.logger import logging
@@ -10,6 +15,15 @@ from ..tools import media_type
 from .utils import runcmd
 
 LOGS = logging.getLogger(__name__)
+
+# التعديل الثاني: دالة مساعدة لتخطي خطأ save_frame المحذوف في الإصدارات الجديدة
+def safe_save_frame(clip, filename, t):
+    if hasattr(clip, "save_frame"):
+        clip.save_frame(filename, t)
+    else:
+        # طريقة الإصدار 2.0+ 
+        frame = clip.get_frame(t)
+        Image.fromarray(frame).save(filename)
 
 
 async def media_to_pic(event, reply, noedits=False):  # sourcery no-metrics
@@ -52,9 +66,10 @@ async def media_to_pic(event, reply, noedits=False):  # sourcery no-metrics
         elif zedmedia.endswith(".webm"):
             clip = VideoFileClip(zedmedia)
             try:
-                clip = clip.save_frame(zedfile, 0.1)
+                # استخدام الدالة الآمنة
+                safe_save_frame(clip, zedfile, 0.1)
             except Exception:
-                clip = clip.save_frame(zedfile, 0)
+                safe_save_frame(clip, zedfile, 0)
         elif zedmedia.endswith(".webp"):
             im = Image.open(zedmedia)
             im.save(zedfile)
@@ -64,9 +79,10 @@ async def media_to_pic(event, reply, noedits=False):  # sourcery no-metrics
             zedmedia = await reply.download_media(file="./temp")
             clip = VideoFileClip(zedmedia)
             try:
-                clip = clip.save_frame(zedfile, 0.1)
+                # استخدام الدالة الآمنة
+                safe_save_frame(clip, zedfile, 0.1)
             except Exception:
-                clip = clip.save_frame(zedfile, 0)
+                safe_save_frame(clip, zedfile, 0)
     elif mediatype == "Document":
         mimetype = reply.document.mime_type
         mtype = mimetype.split("/")
