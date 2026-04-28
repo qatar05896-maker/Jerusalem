@@ -1,6 +1,7 @@
-# Venom
+# Venom Userbot
 # Copyright (C) 2026 Abdullah (Venom). All Rights Reserved
-# كود حديث 2026 - تحميل شامل وسريع بـ 8 خطوط مع دعم IPv4 و Node.js المتقدم
+# الـمـالـك: @S_G0C7
+# كـود الـتـحـمـيـل الـشـامـل والـمـطـور - إصـدار 2026 الـحـصـري
 
 import asyncio
 import os
@@ -15,18 +16,19 @@ from ..core.managers import edit_delete, edit_or_reply
 from . import zq_lo
 
 LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
-plugin_category = "البحث"
+plugin_category = "الـبـحـث"
 extractor = URLExtract()
 
-# مسار مجلد التحميل المؤقت
+# تـحـديـد مـسـارات الـعـمـل والـكـوكـيـز بـشـكـل مـطـلـق
 TEMP_DIR = os.path.join(os.getcwd(), "repthon", "temp_downloads")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# مسار ملف الكوكيز (يقوم بالبحث عنه في نفس مجلد الملف الحالي plugins)
-COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
+# الـمـسـار الـمـطـلـق لـلـكـوكـيـز لـضـمـان الـعـمـل عـلـى Fly.io
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+COOKIES_PATH = os.path.join(CURRENT_DIR, "cookies.txt")
 
 def get_ytdlp_options(is_audio=False):
-    """إعدادات yt-dlp الحديثة مع الإضافات الاحترافية لتخطي حظر السيرفرات"""
+    """إعـدادات الـتـحـمـيـل الـقـصـوى بـنـاءً عـلـى تـجـارب الـكـونـسـول الـنـاجـحـة"""
     opts = {
         "format": "bestaudio/best" if is_audio else "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "outtmpl": os.path.join(TEMP_DIR, "%(title)s.%(ext)s"),
@@ -37,24 +39,22 @@ def get_ytdlp_options(is_audio=False):
         "restrictfilenames": True,
         "windowsfilenames": True,
         
-        # 1. إجبار السيرفر على استخدام IPv4 لتخطي حظر يوتيوب لشبكات IPv6
+        # تـخـطـي حـظـر الـسـيـرفـرات (IPv4 حصراً)
         "force_ipv4": True,
         "source_address": "0.0.0.0",
         
-        # 2. تحديد بيئة Node.js الحديثة لفك تشفير جافاسكريبت يوتيوب
-        "js_runtimes": {"node": {}},
-        
-        # 3. الاعتماد على المكونات الخارجية لتخطي التحديثات المفاجئة
-        "remote_components": ["ejs:github"],
-        
-        # 4. استخدام عميل الويب (لتخطي حماية يوتيوب)
+        # الـاعـتـمـاد عـلـى عـمـيـل الـوِيـب لـضـمـان تـوافـق الـكـوكـيـز
         "extractor_args": {
-            "youtube": ["player_client=web,default"]
+            "youtube": ["player_client=web"]
         },
         
-        # 5. سحب 8 خطوط في نفس الوقت للتحميل الصاروخي المدمج بدون aria2
+        # فـرض اسـتـخـدام نـود لـفـك الـتـشـفـيـر والـتـحـديـات
+        "js_runtime": "node",
+        "remote_components": ["ejs:github"],
+        
+        # الـتـحـمـيـل الـمـتـوازي الـصـاروخـي (8 خـطـوط)
         "concurrent_fragment_downloads": 8,
-        "http_chunk_size": 10485760, # تقسيم الملف 10 ميجا لكل خط
+        "http_chunk_size": 10485760, # 10 مـيـجـا لـكـل خـط لـتـسـريـع الـتـجـمـيـع
     }
     
     if is_audio:
@@ -64,16 +64,14 @@ def get_ytdlp_options(is_audio=False):
             "preferredquality": "320",
         }]
     
-    # 6. استخدام ملف الكوكيز من نفس الفولدر
+    # قـراءة مـلـف الـكـوكـيـز إذا كـان مـتـوفـراً
     if os.path.exists(COOKIES_PATH):
         opts["cookiefile"] = COOKIES_PATH
-    else:
-        LOGS.warning(f"ملف الكوكيز (cookies.txt) غير موجود في المسار: {COOKIES_PATH}!")
         
     return opts
 
 async def run_ytdlp(url, is_audio=False):
-    """دالة لتشغيل التحميل في الخلفية لتجنب تجميد البوت"""
+    """تـنـفـيـذ الـتـحـمـيـل فـي الـخـلـفـيـة لـتـسـريـع اسـتـجـابـة الـبـوت"""
     def _download():
         with yt_dlp.YoutubeDL(get_ytdlp_options(is_audio)) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -87,14 +85,14 @@ async def run_ytdlp(url, is_audio=False):
 
 
 # =========================================================
-# دمج جميع أوامر الفيديو في كود واحد ذكي (يوتيوب، فيس، تيك توك، انستا، الخ)
+# أوامــر تـحـمـيـل الـفـيـديـو (يـوتـيـوب، فـيـس، تـيـك، انـسـتـا، الـخ)
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="(تحميل فيديو|فيس|انستا|سناب|تيك|بنترست|فيسبوك)(?:\s|$)([\s\S]*)",
-    command=("تحميل فيديو", plugin_category)
+    command=("تـحـمـيـل فـي_ديـو", plugin_category)
 )
 async def universal_video_downloader(event):
-    """تحميل الفيديو مباشرة من أي موقع باستخدام yt-dlp المتطور"""
+    """تـحـمـيـل الـفـيـديـو بـأحـدث الـتـقـنـيـات والـسـرعـة الـقـصـوى"""
     msg = event.pattern_match.group(2)
     rmsg = await event.get_reply_message()
     if not msg and rmsg:
@@ -102,46 +100,44 @@ async def universal_video_downloader(event):
         
     urls = extractor.find_urls(msg)
     if not urls:
-        return await edit_or_reply(event, "**⎉╎قـم بإدخـال رابط أو الرد على رابط ليتم التحميل 🔗**")
+        return await edit_or_reply(event, "**⤶ يـرجـى وضـع رابـط صـحـيـح لـلـتـحـمـيـل 🔗**")
         
     url = urls[0]
-    zed = await edit_or_reply(event, "**╮ ❐ جـارِ جلب البيانات والتحميل (8 خطوط)... يرجى الانتظار 𓅫╰**")
+    zed = await edit_or_reply(event, "**⪼ جـارِ جـلـب الـبـيـانـات والـتـحـمـيـل بـنـظـام 8 خـطـوط ...**")
     
     try:
         file_path, info = await run_ytdlp(url, is_audio=False)
-        title = info.get("title", "فيديو بدون عنوان")
+        title = info.get("title", "فـيـديـو")
         
-        await zed.edit(f"**╮ ❐ جـارِ الرفع للسيرفر... 𓅫╰**\n**المقطع:** `{title}`")
+        await zed.edit(f"**⪼ جـارِ رفـع الـمـقـطـع لـلـتـيـلـيـجـرام ...**\n**الـمـقـطـع ↶** `{title}`")
         
         await event.client.send_file(
             event.chat_id,
             file=file_path,
-            caption=f"**⎉╎تـم التحميـل بنجاح ✅**\n**⎉╎العنوان:** `{title}`",
+            caption=f"**• تـم الـتـحـمـيـل بـنـجـاح ✅**\n**• الـعـنـوان ↶** `{title}`\n**• الـمـالـك ↶ @S_G0C7**",
             reply_to=event.reply_to_msg_id or event.id,
             supports_streaming=True
         )
         await zed.delete()
-        os.remove(file_path) # تنظيف السيرفر
+        if os.path.exists(file_path): os.remove(file_path)
         
-    except yt_dlp.utils.DownloadError as e:
-        error_msg = str(e)
-        if "Sign in" in error_msg or "verify" in error_msg.lower():
-            await zed.edit("**⎉╎يوتيوب يطلب تسجيل الدخول. يرجى التأكد من تحديث وصلاحية ملف `cookies.txt` ⚠️**")
-        else:
-            await zed.edit(f"**⎉╎حدث خطأ أثناء التحميل:**\n`{error_msg[:150]}...`")
     except Exception as e:
-        await zed.edit(f"**⎉╎حدث خطأ غير متوقع:**\n`{e}`")
+        error_msg = str(e)
+        if "Sign in" in error_msg:
+            await zed.edit("**⤶ عـذراً، يـوتـيـوب يـطـلـب تـحـديـث مـلـف الـكـوكـيـز ⚠️**")
+        else:
+            await zed.edit(f"**⤶ حـدث خـطـأ أثـنـاء الـتـحـمـيـل ↶**\n`{error_msg[:150]}`")
 
 
 # =========================================================
-# دمج أوامر الصوت
+# أوامــر تـحـمـيـل الـصـوت الـشـامـلـة (MP3)
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="(تحميل صوت|ساوند)(?:\s|$)([\s\S]*)",
-    command=("تحميل صوت", plugin_category)
+    command=("تـحـمـيـل صـوت", plugin_category)
 )
 async def universal_audio_downloader(event):
-    """تحميل الصوتيات كـ MP3 من أي موقع"""
+    """تـحـمـيـل واسـتـخـراج الـصـوت بـأعـلـى جـودة مـمـكـنـة"""
     msg = event.pattern_match.group(2)
     rmsg = await event.get_reply_message()
     if not msg and rmsg:
@@ -149,89 +145,73 @@ async def universal_audio_downloader(event):
         
     urls = extractor.find_urls(msg)
     if not urls:
-        return await edit_or_reply(event, "**⎉╎قـم بإدخـال رابط أو الرد على رابط ليتم التحميل 🔗**")
+        return await edit_or_reply(event, "**⤶ يـرجـى وضـع رابـط صـحـيـح لـلـتـحـمـيـل 🔗**")
         
     url = urls[0]
-    zed = await edit_or_reply(event, "**╮ ❐ جـارِ استخراج الصوت وتحميله... 𓅫╰**")
+    zed = await edit_or_reply(event, "**⪼ جـارِ اسـتـخـراج الـصـوت والـتـحـمـيـل ...**")
     
     try:
         file_path, info = await run_ytdlp(url, is_audio=True)
-        title = info.get("title", "مقطع صوتي")
-        uploader = info.get("uploader", "Venom")
+        title = info.get("title", "مـقـطـع صـوتـي")
         duration = info.get("duration", 0)
         
-        await zed.edit(f"**╮ ❐ جـارِ الرفع للسيرفر... 𓅫╰**\n**المقطع:** `{title}`")
+        await zed.edit(f"**⪼ جـارِ رفـع الـمـلـف الـصـوتـي ...**\n**الـمـلـف ↶** `{title}`")
         
-        # إرسال كملف صوتي منظم
         audio_attr = types.DocumentAttributeAudio(
             duration=duration,
             title=title,
-            performer=uploader
+            performer="Venom"
         )
         
         await event.client.send_file(
             event.chat_id,
             file=file_path,
             attributes=[audio_attr],
-            caption=f"**⎉╎تـم التحميـل بنجاح 🎧**\n**⎉╎العنوان:** `{title}`",
+            caption=f"**• تـم الـتـحـمـيـل بـنـجـاح 🎧**\n**• الـعـنـوان ↶** `{title}`\n**• الـمـالـك ↶ @S_G0C7**",
             reply_to=event.reply_to_msg_id or event.id,
         )
         await zed.delete()
-        os.remove(file_path)
+        if os.path.exists(file_path): os.remove(file_path)
         
     except Exception as e:
-        await zed.edit(f"**⎉╎حدث خطأ أثناء التحميل:**\n`{str(e)[:150]}...`")
+        await zed.edit(f"**⤶ حـدث خـطـأ أثـنـاء الـتـحـمـيـل ↶**\n`{str(e)[:150]}`")
 
 
 # =========================================================
-# أداة البحث المباشر في يوتيوب
+# أداة الـبـحـث الـذكـي فـي يـوتـيـوب
 # =========================================================
 @zq_lo.rep_cmd(
     pattern="يوتيوب(?: |$)(\d*)? ?([\s\S]*)",
-    command=("يوتيوب", plugin_category)
+    command=("يـوتـيـوب", plugin_category)
 )
 async def yt_search(event):
-    """البحث المباشر واستخراج الروابط"""
-    if event.is_reply and not event.pattern_match.group(2):
-        query = (await event.get_reply_message()).text
-    else:
-        query = event.pattern_match.group(2)
+    """الـبـحـث فـي يـوتـيـوب واسـتـخـراج الـنـتـائـج كـروابـط"""
+    query = event.pattern_match.group(2) or (await event.get_reply_message() and (await event.get_reply_message()).text)
         
     if not query:
-        return await edit_or_reply(event, "**╮ بالـرد ﮼؏ كلمـٓھہ للبحث أو ضعها مـع الأمـر ... 𓅫╰**")
+        return await edit_or_reply(event, "**⤶ يـرجـى كـتـابـة كـلـمـة لـلـبـحث أو الـرد عـلـى نـص**")
         
     limit = int(event.pattern_match.group(1)) if event.pattern_match.group(1) else 5
-    if limit <= 0: limit = 5
-    
-    zed = await edit_or_reply(event, "**╮ جـارِ البحث في يوتيوب ▬▭... ╰**")
+    zed = await edit_or_reply(event, "**⪼ جـارِ الـبـحـث فـي يـوتـيـوب ...**")
     
     def _search():
-        opts = {"extract_flat": True, "force_generic_extractor": True, "quiet": True}
-        
-        # الإضافات هنا أيضاً للبحث بسلاسة أكبر
-        opts["force_ipv4"] = True
-        opts["source_address"] = "0.0.0.0"
-        
-        if os.path.exists(COOKIES_PATH): 
-            opts["cookiefile"] = COOKIES_PATH
-        
+        opts = {
+            "extract_flat": True, "quiet": True, "force_ipv4": True, "source_address": "0.0.0.0"
+        }
+        if os.path.exists(COOKIES_PATH): opts["cookiefile"] = COOKIES_PATH
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
             
     try:
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(None, _search)
-        
-        if not results or "entries" not in results or not results["entries"]:
-            return await zed.edit("**⎉╎لم يتم العثور على نتائج لهذه الكلمة ⚠️**")
+        results = await asyncio.get_event_loop().run_in_executor(None, _search)
+        if not results.get("entries"):
+            return await zed.edit("**⤶ لـم يـتـم الـعـثـور عـلـى نـتـائـج ⚠️**")
             
-        reply_text = f"**⎉╎نتائج البحث عن:** `{query}`\n\n"
+        reply_text = f"**• نـتـائـج الـبـحـث عـن ↶** `{query}`\n\n"
         for i, entry in enumerate(results["entries"], 1):
-            title = entry.get("title", "بدون عنوان")
             url = entry.get("url") or entry.get("webpage_url", "")
-            reply_text += f"**{i}-** [{title}]({url})\n"
+            reply_text += f"**{i}-** [{entry.get('title')}]( {url} )\n"
             
         await zed.edit(reply_text, link_preview=False)
-        
     except Exception as e:
-        await zed.edit(f"**⎉╎حدث خطأ أثناء البحث:**\n`{e}`")
+        await zed.edit(f"**⤶ حـدث خـطـأ أثـنـاء الـبـحـث ↶**\n`{e}`")
