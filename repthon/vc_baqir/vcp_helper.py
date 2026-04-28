@@ -2,16 +2,17 @@ import asyncio
 from pathlib import Path
 
 import requests
-from pytgcalls import PyTgCalls, StreamType
+from pytgcalls import PyTgCalls
 from pytgcalls.exceptions import (
     AlreadyJoinedError,
     NoActiveGroupCall,
     NodeJSNotInstalled,
-    NotInGroupCallError,
+    NotInCallError, # تم تحديث اسم الخطأ هنا ليتوافق مع V2
     TooOldNodeJSVersion,
 )
-from pytgcalls.types import AudioPiped, AudioVideoPiped
-from pytgcalls.types.stream import StreamAudioEnded
+from pytgcalls.types.input_stream import AudioPiped, AudioVideoPiped
+from pytgcalls.types.input_stream.quality import HighQualityAudio, HighQualityVideo
+from pytgcalls.types import GroupCallConfig
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 from yt_dlp import YoutubeDL
@@ -21,7 +22,7 @@ from .stream_helper import Stream, check_url, video_dl, yt_regex
 
 class RepVC:
     def __init__(self, client) -> None:
-        self.app = PyTgCalls(client, overload_quiet_mode=True)
+        self.app = PyTgCalls(client)
         self.client = client
         self.CHAT_ID = None
         self.CHAT_NAME = None
@@ -48,18 +49,21 @@ class RepVC:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
                 join_as_title = f" كـ **{join_as_chat.title}**"
+                config = GroupCallConfig(join_as=join_as_chat)
             except ValueError:
                 return "**- قم باضافة ايدي المجموعه لامر الانضمام**"
         else:
-            join_as_chat = await self.client.get_me()
             join_as_title = ""
+            config = None
+            
         try:
-            await self.app.join_group_call(
-                chat_id=chat.id,
-                stream=AudioPiped("baqir/baqir/Silence01s.mp3"),
-                join_as=join_as_chat,
-                stream_type=StreamType().pulse_stream,
-            )
+            # استخدام AudioPiped بالإصدار الحديث بدون StreamType
+            stream = AudioPiped("baqir/baqir/Silence01s.mp3", HighQualityAudio())
+            
+            if config:
+                await self.app.join_group_call(chat.id, stream, config=config)
+            else:
+                await self.app.join_group_call(chat.id, stream)
         except NoActiveGroupCall:
             try:
                 await self.client(
@@ -77,6 +81,7 @@ class RepVC:
             await self.app.leave_group_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
+            
         self.CHAT_ID = chat.id
         self.CHAT_NAME = chat.title
         return f"**- تم الانضمـام بنجـاح الى المحادثـه الصـوتيـه** **{chat.title}**{join_as_title}"
@@ -84,7 +89,7 @@ class RepVC:
     async def leave_vc(self):
         try:
             await self.app.leave_group_call(self.CHAT_ID)
-        except (NotInGroupCallError, NoActiveGroupCall):
+        except (NotInCallError, NoActiveGroupCall): # NotInCallError بدلاً من القديمة
             pass
         self.CHAT_NAME = None
         self.CHAT_ID = None
@@ -125,7 +130,7 @@ class RepVC:
                 title = path.name
             else:
                 return "مسـار الملـف غيـر موجـود ؟!"
-        print(playable)
+                
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             return f"- تم الاضـافه لـ قـائمـة التشغيـل ✓\n- المـوقـع: {len(self.PLAYLIST)+1}"
@@ -141,8 +146,8 @@ class RepVC:
             return f"- جـارِ تشغيـل {title}"
 
     async def handle_next(self, update):
-        if isinstance(update, StreamAudioEnded):
-            await self.skip()
+        # تم تعديلها لتتوافق مع طريقة الأحداث الجديدة
+        await self.skip()
 
     async def skip(self, clear=False):
         if clear:
@@ -152,20 +157,22 @@ class RepVC:
             if self.PLAYING:
                 await self.app.change_stream(
                     self.CHAT_ID,
-                    AudioPiped("baqir/baqir/Silence01s.mp3"),
+                    AudioPiped("baqir/baqir/Silence01s.mp3", HighQualityAudio()),
                 )
             self.PLAYING = False
             return "- التخطـي:\nقائمـة الشغيـل فارغـه ؟!"
 
         next = self.PLAYLIST.pop(0)
         if next["stream"] == Stream.audio:
-            streamable = AudioPiped(next["path"])
+            streamable = AudioPiped(next["path"], HighQualityAudio())
         else:
-            streamable = AudioVideoPiped(next["path"])
+            streamable = AudioVideoPiped(next["path"], HighQualityAudio(), HighQualityVideo())
+            
         try:
             await self.app.change_stream(self.CHAT_ID, streamable)
         except Exception:
             await self.skip()
+            
         self.PLAYING = next
         return f"- تم التخطي\n- جـارِ تشغيـل : `{next['title']}`"
 
@@ -175,6 +182,7 @@ class RepVC:
         if not self.PAUSED:
             await self.app.pause_stream(self.CHAT_ID)
             self.PAUSED = True
+            
         return f"تم التمهـل في {self.CHAT_NAME}"
 
     async def resume(self):
@@ -183,20 +191,5 @@ class RepVC:
         if self.PAUSED:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
+            
         return f"تم الاستئنـاف في {self.CHAT_NAME}"
-
-    # async def mute(self):
-    #     if not self.PLAYING:
-    #         return "Nothing is playing to Mute"
-    #     if not self.MUTED:
-    #         await self.app.mute_stream(self.CHAT_ID)
-    #         self.PAUSED = True
-    #     return f"Muted Stream on {self.CHAT_NAME}"
-
-    # async def unmute(self):
-    #     if not self.PLAYING:
-    #         return "Nothing is playing to Unmute"
-    #     if self.MUTED:
-    #         await self.app.unmute_stream(self.CHAT_ID)
-    #         self.MUTED = False
-    #     return f"Unmuted Stream on {self.CHAT_NAME}"
