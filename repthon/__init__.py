@@ -8,18 +8,18 @@ from .core.session import zq_lo
 from .helpers.utils.utils import runasync
 from .sql_helper.globals import addgvar, delgvar, gvarstatus
 
-__version__ = "3.1.1"
+__version__ = "2026.1.0"
 __license__ = "GNU Affero General Public License v3.0"
-__author__ = "Repthon <https://github.com/RepthonArabic/RepthonAr>"
-__copyright__ = f"Repthon Copyright (C) 2020 - 2021  {__author__}"
+__author__ = "Venom <https://t.me/SourceBoda>"
+__copyright__ = f"Venom Copyright (C) 2026  {__author__}"
 
 zq_lo.version = __version__
 zq_lo.tgbot.version = __version__
-LOGS = logging.getLogger("𝐑𝐞𝐩𝐭𝐡𝐨𝐧")
+LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
 bot = zq_lo
 
 StartTime = time.time()
-repversion = "3.1.3"
+repversion = "2026"
 
 
 def close_connection(*_):
