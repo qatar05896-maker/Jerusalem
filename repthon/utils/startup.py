@@ -1,9 +1,9 @@
-# Repthon - @Repthon
-# Copyright (C) 2022 Repthon . All Rights Reserved
-#< https://t.me/Repthon >
-# This file is a part of < https://github.com/RepthonArabic/RepthonAr/ >
+# Venom - @Venom
+# Copyright (C) 2026 Venom . All Rights Reserved
+#< https://t.me/Venom >
+# This file is a part of < https://github.com/VenomArabic/VenomAr/ >
 # PLease read the GNU Affero General Public License in
-# <https://www.github.com/RepthonArabic/RepthonAr/blob/master/LICENSE/>.
+# <https://www.github.com/VenomArabic/VenomAr/blob/master/LICENSE/>.
 
 import time
 import asyncio
@@ -12,7 +12,7 @@ import logging
 import glob
 import os
 import sys
-import heroku3
+import traceback
 import urllib.request
 from datetime import timedelta
 from pathlib import Path
@@ -40,17 +40,12 @@ from .pluginmanager import load_module
 from .tools import create_supergroup
 
 ENV = bool(os.environ.get("ENV", False))
-LOGS = logging.getLogger("𝐑𝐞𝐩𝐭𝐡𝐨𝐧")
+LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
 cmdhr = Config.COMMAND_HAND_LER
 
-heroku_api = "https://api.heroku.com"
-if Config.HEROKU_APP_NAME is not None and Config.HEROKU_API_KEY is not None:
-    Heroku = heroku3.from_key(Config.HEROKU_API_KEY)
-    app = Heroku.app(Config.HEROKU_APP_NAME)
-    heroku_var = app.config()
-else:
-    app = None
-
+# إنهاء الاعتماد على هيروكو لتجنب الكراش على سيرفرات Fly.io
+app = None
+heroku_var = {}
 
 if ENV:
     VPS_NOLOAD = ["vps"]
@@ -66,7 +61,7 @@ async def autovars(): #Code by T.me/E_7_V
     LOGS.info("جـارِ اضافـة بقيـة الفـارات .. تلقائيـاً")
     rrenv = "ANYTHING"
     rrcom = "."
-    rrrtz = "Asia/Baghdad"
+    rrrtz = "Africa/Cairo"
     heroku_var["ENV"] = rrenv
     heroku_var["COMMAND_HAND_LER"] = rrcom
     heroku_var["TZ"] = rrrtz
@@ -85,8 +80,8 @@ async def autoname(): #Code by T.me/E_7_V
     rdate = tzDateTime.strftime('%Y/%m/%d')
     militaryTime = tzDateTime.strftime('%H:%M')
     rtime = dt.strptime(militaryTime, "%H:%M").strftime("%I:%M %p")
-    rrd = f"‹ {rdate} ›"
-    rrt = f"‹ {rtime} ›"
+    rrd = f"‹ {rdate} ›"
+    rrt = f"‹ {rtime} ›"
     if gvarstatus("r_date") is None:
         rd = "r_date"
         rt = "r_time"
@@ -97,7 +92,7 @@ async def autoname(): #Code by T.me/E_7_V
 
 async def setup_bot():
     """
-    To set up bot for Repthon
+    To set up bot for Venom
     """
     try:
         await zq_lo.connect()
@@ -121,6 +116,7 @@ async def setup_bot():
             Config.OWNER_ID = utils.get_peer_id(zq_lo.me)
     except Exception as e:
         LOGS.error(f"STRING_SESSION - {e}")
+        LOGS.error(traceback.format_exc())
         sys.exit()
 
 
@@ -137,11 +133,12 @@ async def startupmessage():
             Config.ZQ_LOBLOGO = await zq_lo.tgbot.send_file(
                 BOTLOG_CHATID,
                 "https://graph.org/file/f367d5a4a6bf1fbfc99b9.mp4",
-                caption="**•⎆┊تـم بـدء تشغـيل سـورس ريبـــثون الخاص بك .. بنجاح 🧸♥️**",
-                buttons=[(Button.url("𝙍𝙀𝙋𝙏𝙃𝙊𝙉", "https://t.me/Repthon"),)],
+                caption="**•⎆┊تـم بـدء تشغـيل سـورس ڤيـنـوم الخاص بك .. بنجاح 🧸♥️**",
+                buttons=[(Button.url("𝙑𝙚𝙣𝙤𝙢", "https://t.me/Venom"),)],
             )
     except Exception as e:
         LOGS.error(e)
+        LOGS.error(traceback.format_exc())
         return None
     try:
         msg_details = list(get_item_collectionlist("restart_update"))
@@ -149,6 +146,7 @@ async def startupmessage():
             msg_details = msg_details[0]
     except Exception as e:
         LOGS.error(e)
+        LOGS.error(traceback.format_exc())
         return None
     try:
         if msg_details:
@@ -166,6 +164,7 @@ async def startupmessage():
             del_keyword_collectionlist("restart_update")
     except Exception as e:
         LOGS.error(e)
+        LOGS.error(traceback.format_exc())
         return None
 
 
@@ -186,7 +185,7 @@ async def mybot():
             await asyncio.sleep(1)
             await bot.send_message("@BotFather", botname)
             await asyncio.sleep(1)
-            await bot.send_message("@BotFather", "ريبـــثون")
+            await bot.send_message("@BotFather", "ڤيـنـوم")
             await asyncio.sleep(3)
             await bot.send_message("@BotFather", "/setname")
             await asyncio.sleep(1)
@@ -204,16 +203,16 @@ async def mybot():
             await asyncio.sleep(1)
             await bot.send_message("@BotFather", botname)
             await asyncio.sleep(1)
-            await bot.send_message("@BotFather", f"- بـوت ريبـــثون المسـاعـد ♥️🦾 الخـاص بـ  {bot.me.first_name} ")
+            await bot.send_message("@BotFather", f"- بـوت ڤيـنـوم المسـاعـد ♥️🦾 الخـاص بـ  {bot.me.first_name} ")
             await asyncio.sleep(3)
             await bot.send_message("@BotFather", "/setdescription")
             await asyncio.sleep(1)
             await bot.send_message("@BotFather", botname)
             await asyncio.sleep(1)
-            await bot.send_message("@BotFather", f"•⎆┊انـا البــوت المسـاعـد الخــاص بـ {ba_roger} \n•⎆┊بـواسطـتـي يمكـنك التواصــل مـع مـالكـي 🧸♥️\n•⎆┊قنـاة السـورس 🌐 @Repthon 🌐")
+            await bot.send_message("@BotFather", f"•⎆┊انـا البــوت المسـاعـد الخــاص بـ {ba_roger} \n•⎆┊بـواسطـتـي يمكـنك التواصــل مـع مـالكـي 🧸♥️\n•⎆┊قنـاة السـورس 🌐 @Venom 🌐")
         except Exception as e:
             print(e)
-
+            LOGS.error(traceback.format_exc())
 
 
 async def add_bot_to_logger_group(chat_id):
@@ -229,7 +228,9 @@ async def add_bot_to_logger_group(chat_id):
                 fwd_limit=1000000,
             )
         )
-    except BaseException:
+    except BaseException as e:
+        LOGS.error(f"Error in AddChatUserRequest: {e}")
+        LOGS.error(traceback.format_exc())
         try:
             await zq_lo(
                 functions.channels.InviteToChannelRequest(
@@ -239,6 +240,7 @@ async def add_bot_to_logger_group(chat_id):
             )
         except Exception as e:
             LOGS.error(str(e))
+            LOGS.error(traceback.format_exc())
 
 
 async def load_plugins(folder, extfolder=None):
@@ -292,6 +294,7 @@ async def load_plugins(folder, extfolder=None):
                 LOGS.info(
                     f"لا يمكنني تحميل {shortname} بسبب الخطأ {e}\nمجلد القاعده {plugin_path}"
                 )
+                LOGS.error(f"Traceback for {shortname}: {traceback.format_exc()}")
     if extfolder:
         if not failure:
             failure.append("None")
@@ -308,51 +311,11 @@ async def saves():
         ] = "**- تحذيـر ❌ هذا الملف ملغـم .. لـذلك لم يتـم تنصيبـه في حسـابك للامــان ...**"
     except Exception as e:
         print(str(e))
+        LOGS.error(traceback.format_exc())
     try:
-        await zq_lo(JoinChannelRequest("@Repthon"))
+        await zq_lo(JoinChannelRequest("@Venom"))
     except BaseException:
         pass
-    try:
-        await zq_lo(JoinChannelRequest("@roger21v"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthonn"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthon_up"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthon_vars"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthon_cklaish"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@ZQ_LO"))
-    except BaseException:
-        pass 
-    try:
-        await zq_lo(JoinChannelRequest("@Test_Repthon"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthon_help"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@Repthon_support"))
-    except BaseException:
-        pass
-    try:
-        await zq_lo(JoinChannelRequest("@xxfir"))
-    except BaseException:
-        pass
-
 
 
 
@@ -386,11 +349,12 @@ async def verifyLoggerGroup():
                 "حدث خطأ عند محاولة التحقق من فار PRIVATE_GROUP_BOT_API_ID.\n"
                 + str(e)
             )
+            LOGS.error(traceback.format_exc())
     else:
         descript = "لا تقم بحذف هذه المجموعة أو التغيير إلى مجموعة عامه (وظيفتهـا تخزيـن كـل سجـلات وعمليـات البـوت.)"
         photozed = await zq_lo.upload_file(file="baqir/taiba/Repthon1.jpg")
         _, groupid = await create_supergroup(
-            "كـروب السجـل ريبـــثون", zq_lo, Config.TG_BOT_USERNAME, descript, photozed
+            "كـروب السجـل ڤيـنـوم", zq_lo, Config.TG_BOT_USERNAME, descript, photozed
         )
         addgvar("PRIVATE_GROUP_BOT_API_ID", groupid)
         print(
@@ -415,6 +379,7 @@ async def verifyLoggerGroup():
             LOGS.error("PM_LOGGER_GROUP_ID قيمه هذا الفار خطا. تاكد من أنه صحيح.")
         except Exception as e:
             LOGS.error("حدث خطأ اثناء التعرف على فار PM_LOGGER_GROUP_ID.\n" + str(e))
+            LOGS.error(traceback.format_exc())
     else:
         descript = "لا تقم بحذف هذه المجموعة أو التغيير إلى مجموعة عامه (وظيفتهـا تخزيـن رسـائل الخـاص.)"
         photozed = await zq_lo.upload_file(file="baqir/taiba/Repthon2.jpg")
