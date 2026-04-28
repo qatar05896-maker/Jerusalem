@@ -32,7 +32,7 @@ def check_url(url):
 
 async def get_yt_stream_link(url, audio_only=False):
     # إضافة أوامر التخطي المتقدمة (العميل ويب + نود + الكوكيز)
-    bypass_args = f'--extractor-args "youtube:player_client=web" --js-runtime node --remote-components "ejs:github" --force-ipv4'
+    bypass_args = '--extractor-args "youtube:player_client=web" --js-runtime node --remote-components "ejs:github" --force-ipv4'
     if os.path.exists(COOKIES_PATH):
         bypass_args = f'--cookies "{COOKIES_PATH}" {bypass_args}'
         
@@ -46,16 +46,9 @@ async def video_dl(url, title):
     path = f"temp/{title.replace(' ', '_')}.mp4"
     video_opts = {
         "format": "best",
-        "addmetadata": True,
-        "key": "FFmpegMetadata",
         "writethumbnail": False,
-        "prefer_ffmpeg": True,
         "geo_bypass": True,
         "nocheckcertificate": True,
-        "postprocessors": [
-            {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
-            {"key": "FFmpegMetadata"},
-        ],
         "outtmpl": path,
         "logtostderr": False,
         "quiet": True,
@@ -63,8 +56,6 @@ async def video_dl(url, title):
         "force_ipv4": True,
         "source_address": "0.0.0.0",
         "extractor_args": {"youtube": {"player_client": ["web"]}},
-        "js_runtime": "node",
-        "remote_components": "ejs:github",
     }
     
     if os.path.exists(COOKIES_PATH):
