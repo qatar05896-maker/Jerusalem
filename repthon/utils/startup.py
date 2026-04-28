@@ -221,21 +221,22 @@ async def add_bot_to_logger_group(chat_id):
     """
     bot_details = await zq_lo.tgbot.get_me()
     try:
+        from telethon.tl.functions.channels import InviteToChannelRequest
         await zq_lo(
-            functions.messages.AddChatUserRequest(
-                chat_id=chat_id,
-                user_id=bot_details.username,
-                fwd_limit=1000000,
+            InviteToChannelRequest(
+                channel=chat_id,
+                users=[bot_details.username],
             )
         )
     except BaseException as e:
-        LOGS.error(f"Error in AddChatUserRequest: {e}")
-        LOGS.error(traceback.format_exc())
+        LOGS.error(f"Error in InviteToChannelRequest: {e}")
         try:
+            from telethon.tl.functions.messages import AddChatUserRequest
             await zq_lo(
-                functions.channels.InviteToChannelRequest(
-                    channel=chat_id,
-                    users=[bot_details.username],
+                AddChatUserRequest(
+                    chat_id=chat_id,
+                    user_id=bot_details.username,
+                    fwd_limit=10,
                 )
             )
         except Exception as e:
