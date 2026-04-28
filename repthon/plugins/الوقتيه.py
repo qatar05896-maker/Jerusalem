@@ -1,520 +1,153 @@
-# Repthon
-# Copyright (C) 2022 RepthonArabic. All Rights Reserved
+# Venom
+# Copyright (C) 2026 Abdullah (Venom). All Rights Reserved
 #
-# This file is a part of < https://github.com/RepthonArabic/RepthonAr/ >
-# PLease read the GNU Affero General Public License in
-# <https://www.github.com/RepthonArabic/RepthonAr/blob/master/LICENSE/>.
-
-""" وصـف الملـف : اوامـر تغييـر زخـارف البروفايـل والاسـم الوقـتي باللغـة العربيـة كـاملة ولا حـرف انكلـش🤘 تخمـط اذكـر المصـدر يولـد
-زخـارف ممطـروقـه بـ امـر واحـد فقـط
-حقـوق للتـاريخ : @Repthon
-@E_7_V - كتـابـة الملـف :  روجــر"""
-# بــاقــر يولـد هههههههههههههههههههههههههه
+# This file is a part of < https://github.com/VenomArabic/VenomAr/ >
+#
+""" 
+وصـف الملـف : اوامـر تغييـر زخـارف البروفايـل والاسـم الوقـتي
+كود حديث (إصدار 2026) - خفيف، سريع، ومحسّن
+حقـوق للتـاريخ : @Venom
+كتـابـة وتطويـر : عبـدالله
+"""
 
 import asyncio
-import math
 import os
+import time
 
-import heroku3
-import requests
-import urllib3
-from datetime import datetime
-
-from PIL import Image
-from telegraph import Telegraph, exceptions, upload_file
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.types import MessageEntityMentionName
+# -------------------------------------------------------------
+# إجبار السيرفر والبوت على العمل بتوقيت مصر تلقائياً بدون فارات
+os.environ['TZ'] = 'Africa/Cairo'
+try:
+    time.tzset()
+except AttributeError:
+    pass
+# -------------------------------------------------------------
 
 from repthon import zq_lo
-
 from ..Config import Config
-from ..core.managers import edit_delete, edit_or_reply
-from ..sql_helper.globals import addgvar, delgvar, gvarstatus
-
-from . import BOTLOG_CHATID, mention
-
+from ..core.managers import edit_or_reply
+from ..sql_helper.globals import addgvar, gvarstatus
 
 plugin_category = "الادوات"
 
+# ==================== ( القواميس الذكية للخطوط ) ==================== #
+# قاموس زخارف صور البروفايل وخطوط الحقوق
+FONTS_MAP = {
+    "1": "ZThon.ttf",
+    "2": "Starjedi.ttf",
+    "3": "Papernotes.ttf",
+    "4": "Terserah.ttf",
+    "5": "Photography Signature.ttf",
+    "6": "Austein.ttf",
+    "7": "Dream MMA.ttf",
+    "8": "EASPORTS15.ttf",
+    "9": "KGMissKindergarten.ttf",
+    "10": "212 Orion Sans PERSONAL USE.ttf",
+    "11": "PEPSI_pl.ttf",
+    "12": "Paskowy.ttf",
+    "13": "Cream Cake.otf",
+    "14": "Hello Valentina.ttf",
+    "15": "Alien-Encounters-Regular.ttf",
+    "16": "Linebeam.ttf",
+    "17": "EASPORTS15.ttf"
+}
 
-telegraph = Telegraph()
-r = telegraph.create_account(short_name=Config.TELEGRAPH_SHORT_NAME)
-auth_url = r["auth_url"]
+# قاموس زخارف الاسم الوقتي
+TIME_FONTS_MAP = {
+    "1": "𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵𝟬",
+    "2": "𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗𝟎",
+    "3": "١٢٣٤٥٦٧٨٩٠",
+    "4": "₁₂₃₄₅₆₇₈₉₀",
+    "5": "¹²³⁴⁵⁶⁷⁸⁹⁰",
+    "6": "➊➋➌➍➎➏➐➑➒✪",
+    "7": "❶❷❸❹❺❻❼❽❾⓿",
+    "8": "➀➁➂➃➄➅➆➇➈⊙",
+    "9": "⓵⓶⓷⓸⓹⓺⓻⓼⓽⓪",
+    "10": "①②③④⑤⑥⑦⑧⑨⓪",
+    "11": "𝟣𝟤𝟥𝟦𝟧𝟨𝟩𝟪𝟫𝟢",
+    "12": "𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿𝟶",
+    "13": "𝟙𝟚𝟛𝟜𝟝𝟞𝟟𝟠𝟡𝟘",
+    "14": "１２３４５６７８９０"
+}
 
-
-RepthonVP_cmd = (
-    "𓆩 [𝗦𝗼𝘂𝗿𝗰𝗲 𝗥𝗲𝗽𝘁𝗵𝗼𝗻 - اوامـر الفـارات](t.me/Repthon) 𓆪\n\n"
-    "**✾╎قائـمه اوامـر تغييـر زخـارف البروفايـل + الاسـم الوقـتي بأمـر واحـد فقـط - حقـوق لـ التـاريـخ 🦾 :** \n\n"
-    "⪼ `.وقتيه 1` / `.الوقتي 1`\n\n"
-    "⪼ `.وقتيه 2` / `.الوقتي 2`\n\n"
-    "⪼ `.وقتيه 3` / `.الوقتي 3`\n\n"
-    "⪼ `.وقتيه 4` / `.الوقتي 4`\n\n"
-    "⪼ `.وقتيه 5` / `.الوقتي 5`\n\n"
-    "⪼ `.وقتيه 6` / `.الوقتي 6`\n\n"
-    "⪼ `.وقتيه 7` / `.الوقتي 7`\n\n"
-    "⪼ `.وقتيه 8` / `.الوقتي 8`\n\n"
-    "⪼ `.وقتيه 9` / `.الوقتي 9`\n\n"
-    "⪼ `.وقتيه 10` / `.الوقتي 10`\n\n"
-    "⪼ `.وقتيه 11` / `.الوقتي 11`\n\n"
-    "⪼ `.وقتيه 12` / `.الوقتي 12`\n\n"
-    "⪼ `.وقتيه 13` / `.الوقتي 13`\n\n"
-    "⪼ `.وقتيه 14` / `.الوقتي 14`\n\n"
-    "⪼ `.وقتيه 15`\n\n"
-    "⪼ `.وقتيه 16`\n\n"
-    "⪼ `.وقتيه 17`\n\n\n"
-    "**✾╎لـ رؤيـة زغـارف البروفايـل الوقتـي ↶**  [⦇  اضـغـط هنــا  ⦈](t.me/Repthon_vars/20) \n\n"
-    "**✾╎لـ رؤيـة زغـارف الاســم الوقتـي ↶**  [⦇  اضـغـط هنــا  ⦈](t.me/Repthon_vars/24) \n\n\n"
+Venom_cmd = (
+    "𓆩 [𝗦𝗼𝘂𝗿𝗰𝗲 𝗩𝗲𝗻𝗼𝗺 - اوامـر الفـارات](t.me/Venom) 𓆪\n\n"
+    "**✾╎قائـمه اوامـر تغييـر زخـارف البروفايـل + الاسـم الوقـتي بأمـر واحـد فقـط - المطور عبـدالله 🦾 :** \n\n"
+    "⪼ `.وقتيه 1` / `.الوقتي 1`\n"
+    "⪼ `.وقتيه 2` / `.الوقتي 2`\n"
+    "⪼ `.وقتيه 3` / `.الوقتي 3`\n"
+    "⪼ `.وقتيه 4` / `.الوقتي 4`\n"
+    "⪼ `.وقتيه 5` / `.الوقتي 5`\n"
+    "⪼ `.وقتيه 6` / `.الوقتي 6`\n"
+    "⪼ `.وقتيه 7` / `.الوقتي 7`\n"
+    "⪼ `.وقتيه 8` / `.الوقتي 8`\n"
+    "⪼ `.وقتيه 9` / `.الوقتي 9`\n"
+    "⪼ `.وقتيه 10` / `.الوقتي 10`\n"
+    "⪼ `.وقتيه 11` / `.الوقتي 11`\n"
+    "⪼ `.وقتيه 12` / `.الوقتي 12`\n"
+    "⪼ `.وقتيه 13` / `.الوقتي 13`\n"
+    "⪼ `.وقتيه 14` / `.الوقتي 14`\n"
+    "⪼ `.وقتيه 15`\n"
+    "⪼ `.وقتيه 16`\n"
+    "⪼ `.وقتيه 17`\n\n"
+    "**✾╎لـ رؤيـة زغـارف البروفايـل الوقتـي ↶** [⦇  اضـغـط هنــا  ⦈](t.me/Venom/20) \n"
+    "**✾╎لـ رؤيـة زغـارف الاســم الوقتـي ↶** [⦇  اضـغـط هنــا  ⦈](t.me/Venom/24) \n\n"
     "🛃 سيتـم اضـافة المزيـد من الزغـارف بالتحديثـات الجـايـه\n\n"
-    "\n𓆩 [𐇮 𓆩✗ ¦ ↱𝐺𝑜𝑙 𝐷. 𝑅𝑜𝑔𝑒𝑟↲ ¦ ✗𓆪 𐇮](t.me/E_7_V) 𓆪"
+    "\n𓆩 [𐇮 𓆩✗ ¦ ↱ 𝐴𝑏𝑑𝑢𝑙𝑙𝑎ℎ ↲ ¦ ✗𓆪 𐇮](t.me/Venom) 𓆪"
 )
 
 
-# Copyright (C) 2022 @Zed-Thon . All Rights Reserved
 @zq_lo.rep_cmd(pattern="وقتيه(?:\s|$)([\s\S]*)")
-async def variable(event):
-    input_str = event.pattern_match.group(1)
+async def set_profile_font(event):
+    input_str = event.pattern_match.group(1).strip()
+    
+    if not input_str or input_str not in FONTS_MAP:
+        return await edit_or_reply(event, "**✾╎عذراً، الرجاء اختيار رقم صحيح من 1 إلى 17.**")
+
     zed = await edit_or_reply(event, "**✾╎جـاري اضـافة زخـرفـة الوقتيـه لـ بوتـك 💞🦾 . . .**")
-    # All Rights Reserved for "@Zed-Thon" "زلـزال الهيبـه"
-    if input_str == "1":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/ZThon.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "2":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Starjedi.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "3":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Papernotes.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "4":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Terserah.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "5":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Photography Signature.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "6":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Austein.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "7":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Dream MMA.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "8":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/EASPORTS15.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "9":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/KGMissKindergarten.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "10":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/212 Orion Sans PERSONAL USE.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "11":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/PEPSI_pl.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "12":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Paskowy.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "13":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Cream Cake.otf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "14":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Hello Valentina.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "15":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Alien-Encounters-Regular.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "16":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/Linebeam.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "17":
-        variable = "DEFAULT_PIC"
-        zinfo = "repthon/helpers/styles/EASPORTS15.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("DEFAULT_PIC") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة البروفـايل الوقـتي {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**".format(input_str))
-        addgvar(variable, zinfo)
+    zinfo = f"repthon/helpers/styles/{FONTS_MAP[input_str]}"
+    
+    await asyncio.sleep(1)
+    
+    action_text = "اضـافـة" if gvarstatus("DEFAULT_PIC") is None else "تغييـر"
+    await zed.edit(f"**✾╎تم {action_text} زغـرفـة البروفـايل الوقـتي {input_str} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.البروفايل` **لـ بـدء البروفـايل الوقتـي . .**")
+    addgvar("DEFAULT_PIC", zinfo)
 
 
-# Copyright (C) 2022 @Zed-Thon . All Rights Reserved
 @zq_lo.rep_cmd(pattern="الوقتي(?:\s|$)([\s\S]*)")
-async def hhhzelzal(event):
-    input_str = event.pattern_match.group(1)
+async def set_time_font(event):
+    input_str = event.pattern_match.group(1).strip()
+    
+    if not input_str or input_str not in TIME_FONTS_MAP:
+        return await edit_or_reply(event, "**✾╎عذراً، الرجاء اختيار رقم صحيح من 1 إلى 14.**")
+
     zed = await edit_or_reply(event, "**✾╎جـاري اضـافة زخـرفـة الوقتيـه لـ بوتـك 💞🦾 . . .**")
-    # All Rights Reserved for "@Zed-Thon" "زلـزال الهيبـه"
-    if input_str == "1":
-        zinfo = "𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵𝟬"
-        await asyncio.sleep(1.5)
-        if gvarstatus("BA_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵𝟬")
-    elif input_str == "2":
-        zinfo = "𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗𝟎"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗𝟎")
-    elif input_str == "3":
-        zinfo = "١٢٣٤٥٦٧٨٩٠"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "١٢٣٤٥٦٧٨٩٠")
-    elif input_str == "4":
-        zinfo = "₁₂₃₄₅₆₇₈₉₀"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "₁₂₃₄₅₆₇₈₉₀")
-    elif input_str == "5":
-        zinfo = "¹²³⁴⁵⁶⁷⁸⁹⁰"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "¹²³⁴⁵⁶⁷⁸⁹⁰")
-    elif input_str == "6":
-        zinfo = "➊➋➌➍➎➏➐➑➒✪"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "➊➋➌➍➎➏➐➑➒✪")
-    elif input_str == "7":
-        zinfo = "❶❷❸❹❺❻❼❽❾⓿"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "❶❷❸❹❺❻❼❽❾⓿")
-    elif input_str == "8":
-        zinfo = "➀➁➂➃➄➅➆➇➈⊙"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "➀➁➂➃➄➅➆➇➈⊙")
-    elif input_str == "9":
-        zinfo = "⓵⓶⓷⓸⓹⓺⓻⓼⓽⓪"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "⓵⓶⓷⓸⓹⓺⓻⓼⓽⓪")
-    elif input_str == "10":
-        zinfo = "①②③④⑤⑥⑦⑧⑨⓪"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "①②③④⑤⑥⑦⑧⑨⓪")
-    elif input_str == "11":
-        zinfo = "𝟣𝟤𝟥𝟦𝟧𝟨𝟩𝟪𝟫𝟢"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "𝟣𝟤𝟥𝟦𝟧𝟨𝟩𝟪𝟫𝟢")
-    elif input_str == "12":
-        zinfo = "𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿𝟶"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿𝟶")
-    elif input_str == "13":
-        zinfo = "𝟙𝟚𝟛𝟜𝟝𝟞𝟟𝟠𝟡𝟘"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "𝟙𝟚𝟛𝟜𝟝𝟞𝟟𝟠𝟡𝟘")
-    elif input_str == "14":
-        zinfo = "１２３４５６７８９０"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZI_FN") is not None:
-            await zed.edit("**✾╎تم تغييـر زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`".format(zinfo))
-        else:
-            await zed.edit("**✾╎تم إضـافة زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {} **\n**✾╎ارسـل الان ↶** `.الاسم تلقائي`".format(zinfo))
-        addgvar("BA_FN", "１２３４５６７８９０")
+    zinfo = TIME_FONTS_MAP[input_str]
+    
+    await asyncio.sleep(1)
+    
+    action_text = "إضـافة" if gvarstatus("BA_FN") is None else "تغييـر"
+    await zed.edit(f"**✾╎تم {action_text} زغـرفة الاسـم الوقتـي .. بنجـاح✓**\n**✾╎نـوع الزخـرفـه {zinfo} **\n**✾╎الان ارسـل ↶** `.الاسم تلقائي`")
+    addgvar("BA_FN", zinfo)
 
 
-
-# Copyright (C) 2022 @Repthon . All Rights Reserved
 @zq_lo.rep_cmd(pattern="اوامر الوقتي")
-async def cmd(zelzallll):
-    await edit_or_reply(zelzallll, RepthonVP_cmd)
+async def cmd(event):
+    await edit_or_reply(event, Venom_cmd)
 
 
-
-# Copyright (C) 2022 @Repthon . All Rights Reserved
 @zq_lo.rep_cmd(pattern="الخط(?:\s|$)([\s\S]*)")
-async def variable(event):
-    input_str = event.pattern_match.group(1)
+async def set_watermark_font(event):
+    input_str = event.pattern_match.group(1).strip()
+    
+    if not input_str or input_str not in FONTS_MAP:
+        return await edit_or_reply(event, "**✾╎عذراً، الرجاء اختيار رقم صحيح من 1 إلى 17.**")
+
     zed = await edit_or_reply(event, "**✾╎جـاري اضـافة زخـرفـة خـط الحقـوق لـ بوتـك 💞🦾 . . .**")
-    # All Rights Reserved for "@Zed-Thon" "زلـزال الهيبـه"
-    if input_str == "1":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/ZThon.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "2":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Starjedi.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "3":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Papernotes.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "4":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Terserah.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "5":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Photography Signature.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "6":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Austein.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "7":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Dream MMA.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "8":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/EASPORTS15.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "9":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/KGMissKindergarten.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "10":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/212 Orion Sans PERSONAL USE.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "11":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/PEPSI_pl.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "12":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Paskowy.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "13":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Cream Cake.otf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "14":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Hello Valentina.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "15":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Alien-Encounters-Regular.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "16":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/Linebeam.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
-    elif input_str == "17":
-        variable = "ZED_FONTS"
-        zinfo = "repthon/helpers/styles/EASPORTS15.ttf"
-        await asyncio.sleep(1.5)
-        if gvarstatus("ZED_FONTS") is None:
-            await zed.edit("**✾╎تم اضـافـة زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        else:
-            await zed.edit("**✾╎تم تغييـر زغـرفـة خـط الحقـوق {} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**".format(input_str))
-        addgvar(variable, zinfo)
+    zinfo = f"repthon/helpers/styles/{FONTS_MAP[input_str]}"
+    
+    await asyncio.sleep(1)
+    
+    action_text = "اضـافـة" if gvarstatus("ZED_FONTS") is None else "تغييـر"
+    await zed.edit(f"**✾╎تم {action_text} زغـرفـة خـط الحقـوق {input_str} بنجـاح ☑️**\n\n**✾╎الان قـم بـ ارسـال الامـر ↶** `.حقوق` **+ كلمـه بالـرد ع (صوره-ملصق-متحركه-فيديو) . .**")
+    addgvar("ZED_FONTS", zinfo)
