@@ -1,7 +1,12 @@
+# Venom Userbot
+# Copyright (C) 2026 Abdullah (Venom). All Rights Reserved
+# الـمـالـك: @S_G0C7
+# مـلـف الـتـهـيـئـة الـرئـيـسـي (Init) - مـخـصـص لـبـيـئـة Fly.io بـدون هـيـروكـو
+
 import signal
 import sys
 import time
-import heroku3
+
 from .Config import Config
 from .core.logger import logging
 from .core.session import zq_lo
@@ -10,12 +15,12 @@ from .sql_helper.globals import addgvar, delgvar, gvarstatus
 
 __version__ = "2026.1.0"
 __license__ = "GNU Affero General Public License v3.0"
-__author__ = "Venom <https://t.me/SourceBoda>"
+__author__ = "Venom <https://t.me/S_G0C7>"
 __copyright__ = f"Venom Copyright (C) 2026  {__author__}"
 
 zq_lo.version = __version__
 zq_lo.tgbot.version = __version__
-LOGS = logging.getLogger("𝙑𝙚𝙣𝙤𝙢")
+LOGS = logging.getLogger("Venom")
 bot = zq_lo
 
 StartTime = time.time()
@@ -23,7 +28,7 @@ repversion = "2026"
 
 
 def close_connection(*_):
-    print("تم اغلاق اتصال السورس.")
+    print("تـم إغـلاق اتـصـال الـسـورس بـأمـان.")
     runasync(zq_lo.disconnect())
     sys.exit(143)
 
@@ -36,6 +41,7 @@ if Config.UPSTREAM_REPO == "Repthon":
 else:
     UPSTREAM_REPO_URL = Config.UPSTREAM_REPO
 
+# تـهـيـئـة وإعـداد آيـدي جـروب الـلـوج (سـجـل الـبـوت)
 if Config.PRIVATE_GROUP_BOT_API_ID == 0:
     if gvarstatus("PRIVATE_GROUP_BOT_API_ID") is None:
         Config.BOTLOG = False
@@ -51,6 +57,7 @@ else:
         Config.BOTLOG_CHATID = Config.PRIVATE_GROUP_BOT_API_ID
     Config.BOTLOG = True
 
+# تـهـيـئـة أيـدي جـروب سـجـل الـخـاص
 if Config.PM_LOGGER_GROUP_ID == 0:
     if gvarstatus("PM_LOGGER_GROUP_ID") is None:
         Config.PM_LOGGER_GROUP_ID = -100
@@ -59,18 +66,13 @@ if Config.PM_LOGGER_GROUP_ID == 0:
 elif str(Config.PM_LOGGER_GROUP_ID)[0] != "-":
     Config.PM_LOGGER_GROUP_ID = int("-" + str(Config.PM_LOGGER_GROUP_ID))
 
-try:
-    if Config.HEROKU_API_KEY is not None or Config.HEROKU_APP_NAME is not None:
-        HEROKU_APP = heroku3.from_key(Config.HEROKU_API_KEY).apps()[
-            Config.HEROKU_APP_NAME
-        ]
-    else:
-        HEROKU_APP = None
-except Exception:
-    HEROKU_APP = None
+
+# 🔴 تـعـديـل حـاسـم: تـمـت إزالـة مـكـتـبـة heroku3 كـلـيـاً لـتـوافـق الـسـيـرفـر مـع Fly.io
+# نـتـرك الـمـتـغـيـر بـقـيـمـة None لـكـي لـا تـنـهـار الـإضـافـات الـأخـرى الـتـي تـسـتـدعـيـه
+HEROKU_APP = None
 
 
-# Global Configiables
+# مـتـغـيـرات عـامـة لـعـمـل الـسـورس (Global Configiables)
 COUNT_MSG = 0
 USERS = {}
 COUNT_PM = {}
@@ -80,11 +82,12 @@ ISAFK = False
 AFKREASON = None
 CMD_LIST = {}
 SUDO_LIST = {}
-# for later purposes
+
+# لـلـاسـتـخـدام الـلـاحـق فـي الـمـلـفـات
 INT_PLUG = ""
 LOAD_PLUG = {}
 
-# Variables
+# ثـوابـت (Variables)
 BOTLOG = Config.BOTLOG
 BOTLOG_CHATID = Config.BOTLOG_CHATID
 PM_LOGGER_GROUP_ID = Config.PM_LOGGER_GROUP_ID
