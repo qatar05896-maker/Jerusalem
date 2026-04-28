@@ -10,23 +10,20 @@ from ..core.logger import logging
 LOGS = logging.getLogger(__name__)
 
 def start() -> scoped_session:
-    # 1. البحث عن رابط قاعدة البيانات في كل المصادر الممكنة
-    db_uri = Config.DB_URI or os.environ.get("DB_URI") or os.environ.get("DATABASE_URL")
+    # البيانات التي استخرجناها من قاعدة بياناتك (wild-wind-1156)
+    db_credentials = "postgres://postgres:1BQPjBsXjmYPwqV@wild-wind-1156.flycast:5432"
 
-    # 2. التحقق من وجود الرابط قبل البدء بالعمليات لتجنب خطأ NoneType
-    if not db_uri:
-        LOGS.error("DB_URI is not configured. Using temporary SQLite database.")
-        # حل احتياطي لتشغيل البوت حتى لو نسيت الرابط
-        db_uri = "sqlite:///temp.db"
+    # 1. محاولة جلب الرابط من ملف الكونفنج أو المتغيرات، وإذا لم يوجد نستخدم الرابط الثابت أعلاه
+    db_uri = Config.DB_URI or os.environ.get("DB_URI") or db_credentials
 
-    # 3. تعديل الرابط ليتوافق مع SQLAlchemy الحديثة (postgresql:// بدلاً من postgres://)
-    database_url = (
-        db_uri.replace("postgres:", "postgresql:")
-        if db_uri and "postgres://" in db_uri
-        else db_uri
-    )
+    # 2. التحقق من الرابط وتعديل البروتوكول فقط دون المساس باسم المستخدم
+    # استبدال أول postgres:// فقط بـ postgresql://
+    if db_uri and db_uri.startswith("postgres://"):
+        database_url = db_uri.replace("postgres://", "postgresql://", 1)
+    else:
+        database_url = db_uri
     
-    # 4. إنشاء محرك قاعدة البيانات والاتصال
+    # 3. إنشاء محرك قاعدة البيانات والاتصال
     engine = create_engine(database_url)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
@@ -38,6 +35,6 @@ try:
     SESSION = start()
 except Exception as e:
     LOGS.error(f"حدث خطأ أثناء تشغيل قاعدة البيانات: {str(e)}")
-    # إنشاء قاعدة بيانات وهمية في الذاكرة كحل أخير لمنع انهيار البوت بالكامل
+    # إنشاء قاعدة بيانات في الذاكرة كحل أخير لمنع الانهيار
     engine = create_engine("sqlite:///:memory:")
     SESSION = scoped_session(sessionmaker(bind=engine, autoflush=False))
