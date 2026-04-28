@@ -1,6 +1,3 @@
-import asyncio
-import io
-import os
 import pathlib
 import time
 from datetime import datetime
@@ -13,84 +10,90 @@ from ..helpers import progress
 
 NAME = "untitled"
 
-downloads = pathlib.Path(os.path.join(os.getcwd(), Config.TMP_DOWNLOAD_DIRECTORY))
-
-
-async def _get_file_name(path: pathlib.Path, full: bool = True) -> str:
-    return str(path.absolute()) if full else path.stem + path.suffix
-
+# استخدام pathlib بشكل كامل ومباشر لإدارة المسارات (الاستغناء عن مكتبة os)
+BASE_DIR = pathlib.Path.cwd()
+DOWNLOADS_DIR = BASE_DIR / Config.TMP_DOWNLOAD_DIRECTORY
 
 async def tg_dl(event):
-    "To download the replied telegram file"
+    """دالة حديثة لتحميل الملفات المرفقة في رسائل تيليجرام"""
     mone = await edit_or_reply(event, "**- جـارِ التحميـل 📥...**")
-    name = NAME
-    path = None
-    if not os.path.isdir(Config.TMP_DOWNLOAD_DIRECTORY):
-        os.makedirs(Config.TMP_DOWNLOAD_DIRECTORY)
+    
     reply = await event.get_reply_message()
-    if reply:
-        start = datetime.now()
-        for attr in getattr(reply.document, "attributes", []):
+    
+    # التحقق من وجود رسالة مقتبسة تحتوي على ميديا بطريقة نظيفة
+    if not reply or not (reply.document or reply.photo):
+        await mone.edit("**- الرجاء الرد على فيديو أو ملف صوتي لتشغيله...**")
+        return False
+
+    # إنشاء مجلد التحميلات إذا لم يكن موجوداً
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    start_time = datetime.now()
+    name = NAME
+    
+    # استخراج اسم الملف من خصائص المستند (إن وجد)
+    if reply.document:
+        for attr in reply.document.attributes:
             if isinstance(attr, types.DocumentAttributeFilename):
                 name = attr.file_name
-        path = pathlib.Path(os.path.join(downloads, name))
-        ext = get_extension(reply.document)
-        if path and not path.suffix and ext:
-            path = path.with_suffix(ext)
-        if name == NAME:
-            name += "_" + str(getattr(reply.document, "id", reply.id)) + ext
-        if path and path.exists():
-            if path.is_file():
-                newname = f"{str(path.stem)}_OLD"
-                path.rename(path.with_name(newname).with_suffix(path.suffix))
-                file_name = path
-            else:
-                file_name = path / name
-        elif path and not path.suffix and ext:
-            file_name = downloads / path.with_suffix(ext)
-        elif path:
-            file_name = path
+                break
+                
+    # استخراج الامتداد بشكل آمن
+    ext = get_extension(reply.document) or get_extension(reply.photo) or ""
+    
+    # توليد اسم افتراضي في حال عدم وجود اسم للملف
+    if name == NAME:
+        name += f"_{reply.id}{ext}"
+        
+    file_path = DOWNLOADS_DIR / name
+
+    # إضافة الامتداد إذا كان مفقوداً
+    if not file_path.suffix and ext:
+        file_path = file_path.with_suffix(ext)
+
+    # معالجة تعارض الأسماء: إذا كان الملف موجوداً مسبقاً، نعيد تسمية القديم
+    if file_path.exists() and file_path.is_file():
+        new_name = f"{file_path.stem}_OLD{file_path.suffix}"
+        file_path.rename(file_path.with_name(new_name))
+
+    c_time = time.time()
+
+    # دالة داخلية للتعامل مع شريط التقدم (أفضل من استخدام lambda و create_task)
+    async def progress_cb(current, total):
+        await progress(current, total, mone, c_time, "**- جـارِ التحميـل 📥...**")
+
+    try:
+        # استخدام fast_download_file دائماً مع الملفات لتسريع التحميل
+        if reply.document:
+            # فتح الملف باستخدام pathlib
+            with file_path.open("wb") as fd:
+                await event.client.fast_download_file(
+                    location=reply.document,
+                    out=fd,
+                    progress_callback=progress_cb
+                )
         else:
-            file_name = downloads / name
-        file_name.parent.mkdir(parents=True, exist_ok=True)
-        c_time = time.time()
-        if (
-            not reply.document
-            and reply.photo
-            and file_name
-            and file_name.suffix
-            or not reply.document
-            and not reply.photo
-        ):
+            # الصور والملفات الخفيفة تُحمل عبر الطريقة التقليدية
             await reply.download_media(
-                file=file_name.absolute(),
-                progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
-                ),
+                file=str(file_path),
+                progress_callback=progress_cb
             )
-        elif not reply.document:
-            file_name = await reply.download_media(
-                file=downloads,
-                progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
-                ),
-            )
-        else:
-            dl = io.FileIO(file_name.absolute(), "a")
-            await event.client.fast_download_file(
-                location=reply.document,
-                out=dl,
-                progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
-                ),
-            )
-            dl.close()
-        end = datetime.now()
-        ms = (end - start).seconds
-        await mone.edit(
-            f"**❈╎تم التحميـل خلال {ms} ثانيـه.**\n**❈╎مسـار التحميـل :- **  `{os.path.relpath(file_name,os.getcwd())}`\n"
-        )
-        return os.path.relpath(file_name, os.getcwd())
-    else:
-        await mone.edit("**- بالـرد ع فيديـو او ملف صوتي لتشغيلـه...**")
+            
+    except Exception as e:
+        await mone.edit(f"**- حـدث خطـأ أثنـاء التحميـل:**\n`{e}`")
         return False
+
+    end_time = datetime.now()
+    ms = (end_time - start_time).seconds
+    
+    # حساب المسار النسبي (Relative Path) بطريقة احترافية
+    try:
+        rel_path = file_path.relative_to(BASE_DIR)
+    except ValueError:
+        rel_path = file_path
+
+    await mone.edit(
+        f"**❈╎تم التحميـل خلال {ms} ثانيـه.**\n**❈╎مسـار التحميـل :- ** `{rel_path}`\n"
+    )
+    
+    return str(rel_path)
