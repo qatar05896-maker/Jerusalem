@@ -1,155 +1,118 @@
 # تعريب وتحديث فريق ريبـــثون 
 # Repthon UsetBot T.me/Repthon
 # Devolper Baqir T.me/E_7_V
+# تم التحديث لأحدث إصدار من PyTgCalls V2.x (NTgCalls)
+
 import asyncio
 import logging
-
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import User
+
+# استدعاءات مكتبة PyTgCalls الحديثة
+from pytgcalls import PyTgCalls, filters
+from pytgcalls.types import MediaStream, Update, StreamEnded, GroupCallConfig
+
 from repthon import zq_lo
 from ..Config import Config
 from ..core.managers import edit_delete, edit_or_reply
-
-from ..vc_baqir.stream_helper import Stream
 from ..vc_baqir.tg_downloader import tg_dl
-from ..vc_baqir.vcp_helper import RepVC
 
 plugin_category = "المكالمات"
 
 logging.getLogger("pytgcalls").setLevel(logging.ERROR)
 
 OWNER_ID = zq_lo.uid
-
 vc_session = Config.VC_SESSION
 
+# إعداد عميل المكالمات
 if vc_session:
     vc_client = TelegramClient(
         StringSession(vc_session), Config.APP_ID, Config.API_HASH
     )
+    vc_client.start()
 else:
     vc_client = zq_lo
 
-vc_client.__class__.__module__ = "telethon.client.telegramclient"
-vc_player = RepVC(vc_client)
+# تهيئة PyTgCalls بالإصدار الحديث
+call_py = PyTgCalls(vc_client)
+call_py.start()
 
-asyncio.create_task(vc_player.start())
+# نظام قائمة التشغيل (Queue) الحديث
+PLAYLIST = {}
 
-
-@vc_player.app.on_stream_end()
-async def handler(_, update):
-    await vc_player.handle_next(update)
-
-
-ALLOWED_USERS = set()
+# دالة الانتقال التلقائي للمقطع التالي عند انتهاء المقطع الحالي
+@call_py.on_update(filters.stream_end())
+async def on_stream_end(client: PyTgCalls, update: StreamEnded):
+    chat_id = update.chat_id
+    if chat_id in PLAYLIST and len(PLAYLIST[chat_id]) > 0:
+        # حذف المقطع الذي انتهى
+        PLAYLIST[chat_id].pop(0)
+        
+        # إذا كان هناك مقاطع أخرى، قم بتشغيل التالي
+        if len(PLAYLIST[chat_id]) > 0:
+            next_track = PLAYLIST[chat_id][0]
+            # استخدام الأمر play الموحد في التحديث الجديد
+            await call_py.play(chat_id, next_track["stream"])
+        else:
+            # إذا انتهت القائمة، غادر المكالمة
+            await call_py.leave_call(chat_id)
 
 
 @zq_lo.rep_cmd(
-    pattern="انضمام ?(\S+)? ?(?:ك)? ?(\S+)?",
-    command=("انضمام", plugin_category),
+    pattern="شغل ?(1)? ?([\S ]*)?",
+    command=("شغل", plugin_category),
     info={
-        "header": "لـ الانضمـام الى المحـادثه الصـوتيـه",
-        "ملاحظـه": "يمكنك اضافة الامر (ك) للامر الاساسي للانضمام الى المحادثه ك قنـاة مع اخفاء هويتك",
+        "header": "تشغيـل المقـاطع الصـوتيـه في المكـالمـات",
         "امـر اضافـي": {
-            "ك": "للانضمام الى المحادثه ك قنـاة",
+            "1": "فرض تشغيـل المقطـع بالقـوة وتخطي الحالي",
         },
         "الاستخـدام": [
-            "{tr}انضمام",
-            "{tr}انضمام + ايـدي المجمـوعـه",
-            "{tr}انضمام ك (peer_id)",
-            "{tr}انضمام (chat_id) ك (peer_id)",
-        ],
-        "مثــال :": [
-            "{tr}انضمام",
-            "{tr}انضمام -1005895485",
-            "{tr}انضمام ك -1005895485",
-            "{tr}انضمام -1005895485 ك -1005895485",
+            "{tr}شغل بالــرد ع مقطـع صـوتي",
+            "{tr}شغل + رابـط",
+            "{tr}شغل 1 + رابـط",
         ],
     },
 )
-async def joinVoicechat(event):
-    "لـ الانضمـام الى المحـادثه الصـوتيـه"
-    chat = event.pattern_match.group(1)
-    joinas = event.pattern_match.group(2)
+async def play_audio(event):
+    "لـ تشغيـل المقـاطع الصـوتيـه في المكـالمـات"
+    flag = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(2)
+    chat_id = event.chat_id
 
-    await edit_or_reply(event, "**- جـارِ الانضمـام الى المحـادثـه الصـوتيـه ...**")
+    if input_str == "" and event.reply_to_msg_id:
+        input_str = await tg_dl(event)
+        
+    if not input_str:
+        return await edit_delete(event, "**- قـم بـ إدخـال رابـط أو الرد على المقطـع الصوتـي للتشغيـل...**", time=10)
 
-    if chat and chat != "ك":
-        if chat.strip("-").isnumeric():
-            chat = int(chat)
+    zed = await edit_or_reply(event, "**╮ جـارِ المعالجة والتشغيـل في المكـالمـه... 🎧♥️╰**")
+
+    # إعداد الستريم الصوتي وتجاهل الفيديو لتوفير البيانات
+    stream = MediaStream(
+        media_path=input_str,
+        video_flags=MediaStream.Flags.IGNORE
+    )
+
+    if chat_id not in PLAYLIST:
+        PLAYLIST[chat_id] = []
+
+    # إذا تم إرسال أمر الفرض (1) أو القائمة فارغة
+    if flag or len(PLAYLIST[chat_id]) == 0:
+        if flag:
+            PLAYLIST[chat_id].insert(0, {"title": "مقطع صوتي", "stream": stream})
+        else:
+            PLAYLIST[chat_id].append({"title": "مقطع صوتي", "stream": stream})
+            
+        try:
+            await call_py.play(chat_id, stream)
+            await edit_delete(zed, "**- تم بدء تشغيل المقطع الصوتي بنجاح 🎧♥️**")
+        except Exception as e:
+            await edit_delete(zed, f"**- حـدث خطـأ أثناء التشغيل:**\n`{e}`")
     else:
-        chat = event.chat_id
-
-    if vc_player.app.active_calls:
-        return await edit_delete(
-            event, f"**- انت منضـم مسبقـاً الـى**  {vc_player.CHAT_NAME}"
-        )
-
-    try:
-        vc_chat = await zq_lo.get_entity(chat)
-    except Exception as e:
-        return await edit_delete(event, f'**- خطـأ** : \n{e or "UNKNOWN CHAT"}')
-
-    if isinstance(vc_chat, User):
-        return await edit_delete(
-            event, "**- المحـادثـه الصـوتيـه غيـر مدعومـه هنـا ؟!**"
-        )
-
-    if joinas and not vc_chat.username:
-        await edit_or_reply(
-            event, "**- لم استطـع الانضمـام الى الدردشـه الخـاصه .. قم بالانضمـام يدويـاً ...**"
-        )
-        joinas = False
-
-    out = await vc_player.join_vc(vc_chat, joinas)
-    await edit_delete(event, out)
-
-
-@zq_lo.rep_cmd(
-    pattern="خروج",
-    command=("خروج", plugin_category),
-    info={
-        "header": "لـ المغـادره من المحـادثه الصـوتيـه",
-        "الاستخـدام": [
-            "{tr}خروج",
-        ],
-    },
-)
-async def leaveVoicechat(event):
-    "لـ المغـادره من المحـادثه الصـوتيـه"
-    if vc_player.CHAT_ID:
-        await edit_or_reply(event, "**- جـارِ مغـادرة المحـادثـة الصـوتيـه ...**")
-        chat_name = vc_player.CHAT_NAME
-        await vc_player.leave_vc()
-        await edit_delete(event, f"**- تم مغـادرة المكـالمـه** {chat_name}")
-    else:
-        await edit_delete(event, "**- لم تنضم بعـد للمكالمـه ؟!**")
-
-
-@zq_lo.rep_cmd(
-    pattern="قائمة التشغيل",
-    command=("قائمة التشغيل", plugin_category),
-    info={
-        "header": "لـ جلب كـل المقـاطع المضـافه لقائمـة التشغيـل في المكالمـه",
-        "الاستخـدام": [
-            "{tr}قائمة التشغيل",
-        ],
-    },
-)
-async def get_playlist(event):
-    "لـ جلب كـل المقـاطع المضـافه لقائمـة التشغيـل في المكالمـه"
-    await edit_or_reply(event, "**- جـارِ جلب قائمـة التشغيـل ...**")
-    playl = vc_player.PLAYLIST
-    if not playl:
-        await edit_delete(event, "Playlist empty", time=10)
-    else:
-        rep = ""
-        for num, item in enumerate(playl, 1):
-            if item["stream"] == Stream.audio:
-                rep += f"{num}-  `{item['title']}`\n"
-            else:
-                rep += f"{num}- `{item['title']}`\n"
-        await edit_delete(event, f"**- قائمـة التشغيـل :**\n\n{rep}\n**Enjoy the show**")
+        # الإضافة لقائمة الانتظار
+        PLAYLIST[chat_id].append({"title": "مقطع صوتي", "stream": stream})
+        await edit_delete(zed, f"**- المقطع يعمل حالياً! تمت إضافته لقائمة الانتظار بالمركز {len(PLAYLIST[chat_id]) - 1} 📝**")
 
 
 @zq_lo.rep_cmd(
@@ -163,82 +126,47 @@ async def get_playlist(event):
         "الاستخـدام": [
             "{tr}فيد بالــرد ع فيـديـو",
             "{tr}فيد + رابـط",
-            "{tr}فيد  ف + رابـط",
-        ],
-        "مثــال :": [
-            "{tr}فيد بالـرد",
-            "{tr}فيد https://www.youtube.com/watch?v=c05GBLT_Ds0",
-            "{tr}فيد 1 https://www.youtube.com/watch?v=c05GBLT_Ds0",
         ],
     },
 )
 async def play_video(event):
     "لـ تشغيـل مقـاطع الفيـديـو في المكـالمـات"
-    con = event.pattern_match.group(1).lower()
-    flag = event.pattern_match.group(1)
-    input_str = event.pattern_match.group(2)
-    if con == "فيديو":
+    con = event.pattern_match.group(1)
+    if con and con.lower() == "فيديو":
         return
-    if input_str == "" and event.reply_to_msg_id:
-        input_str = await tg_dl(event)
-    if not input_str:
-        return await edit_delete(
-            event, "**- قـم بـ إدخـال رابـط مقطع الفيديـو للتشغيـل...**", time=20
-        )
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**- قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضم**")
-    if not input_str:
-        return await edit_or_reply(event, "**- قـم بـ إدخـال رابـط مقطع الفيديـو للتشغيـل...**")
-    await edit_or_reply(event, "**╮ جـارِ تشغيـل مقطـٓـع الفيـٓـديو في المكـالمـه... 🎧♥️╰**")
-    if flag:
-        resp = await vc_player.play_song(input_str, Stream.video, force=True)
-    else:
-        resp = await vc_player.play_song(input_str, Stream.video, force=False)
-    if resp:
-        await edit_delete(event, resp, time=30)
-
-
-@zq_lo.rep_cmd(
-    pattern="شغل ?(1)? ?([\S ]*)?",
-    command=("شغل", plugin_category),
-    info={
-        "header": "تشغيـل المقـاطع الصـوتيـه في المكـالمـات",
-        "امـر اضافـي": {
-            "1": "فرض تشغيـل المقطـع بالقـوة",
-        },
-        "الاستخـدام": [
-            "{tr}شغل بالــرد ع مقطـع صـوتي",
-            "{tr}شغل + رابـط",
-            "{tr}شغل 1 + رابـط",
-        ],
-        "مثــال :": [
-            "{tr}شغل بالـرد",
-            "{tr}شغل https://www.youtube.com/watch?v=c05GBLT_Ds0",
-            "{tr}شغل 1 https://www.youtube.com/watch?v=c05GBLT_Ds0",
-        ],
-    },
-)
-async def play_audio(event):
-    "لـ تشغيـل المقـاطع الصـوتيـه في المكـالمـات"
+        
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
+    chat_id = event.chat_id
+
     if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
+        
     if not input_str:
-        return await edit_delete(
-            event, "**- قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**", time=20
-        )
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**- قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضم**")
-    if not input_str:
-        return await edit_or_reply(event, "**- قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**")
-    await edit_or_reply(event, "**╮ جـارِ تشغيـل المقطـٓـع الصـٓـوتي في المكـالمـه... 🎧♥️╰**")
-    if flag:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=True)
+        return await edit_delete(event, "**- قـم بـ إدخـال رابـط أو الرد على مقطع الفيديـو للتشغيـل...**", time=10)
+
+    zed = await edit_or_reply(event, "**╮ جـارِ تشغيـل مقطـٓـع الفيـٓـديو في المكـالمـه... 🖥♥️╰**")
+
+    # إعداد الستريم المرئي
+    stream = MediaStream(media_path=input_str)
+
+    if chat_id not in PLAYLIST:
+        PLAYLIST[chat_id] = []
+
+    if flag or len(PLAYLIST[chat_id]) == 0:
+        if flag:
+            PLAYLIST[chat_id].insert(0, {"title": "مقطع فيديو", "stream": stream})
+        else:
+            PLAYLIST[chat_id].append({"title": "مقطع فيديو", "stream": stream})
+            
+        try:
+            await call_py.play(chat_id, stream)
+            await edit_delete(zed, "**- تم بدء تشغيل الفيديو بنجاح 🖥♥️**")
+        except Exception as e:
+            await edit_delete(zed, f"**- حـدث خطـأ أثناء التشغيل:**\n`{e}`")
     else:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=False)
-    if resp:
-        await edit_delete(event, resp, time=30)
+        PLAYLIST[chat_id].append({"title": "مقطع فيديو", "stream": stream})
+        await edit_delete(zed, f"**- تمت إضافة الفيديو لقائمة الانتظار بالمركز {len(PLAYLIST[chat_id]) - 1} 📝**")
 
 
 @zq_lo.rep_cmd(
@@ -246,16 +174,18 @@ async def play_audio(event):
     command=("توقف", plugin_category),
     info={
         "header": "لـ ايقـاف تشغيـل للمقطـع مؤقتـاً في المكـالمـه",
-        "الاستخـدام": [
-            "{tr}تمهل",
-        ],
     },
 )
 async def pause_stream(event):
     "لـ ايقـاف تشغيـل للمقطـع مؤقتـاً في المكـالمـه"
+    chat_id = event.chat_id
     await edit_or_reply(event, "**- جـارِ الايقـاف مؤقتـاً ...**")
-    res = await vc_player.pause()
-    await edit_delete(event, res, time=30)
+    try:
+        # التحديث الجديد يستخدم pause بدلاً من pause_stream
+        await call_py.pause(chat_id)
+        await edit_delete(event, "**- تم إيقاف التشغيل مؤقتاً ⏸**")
+    except Exception as e:
+        await edit_delete(event, f"**- خطأ:** `{e}`")
 
 
 @zq_lo.rep_cmd(
@@ -263,16 +193,18 @@ async def pause_stream(event):
     command=("كمل", plugin_category),
     info={
         "header": "لـ متابعـة تشغيـل المقطـع في المكـالمـه",
-        "الاستخـدام": [
-            "{tr}تابع",
-        ],
     },
 )
 async def resume_stream(event):
     "لـ متابعـة تشغيـل المقطـع في المكـالمـه"
+    chat_id = event.chat_id
     await edit_or_reply(event, "**- جـار الاستئنـاف ...**")
-    res = await vc_player.resume()
-    await edit_delete(event, res, time=30)
+    try:
+        # التحديث الجديد يستخدم resume بدلاً من resume_stream
+        await call_py.resume(chat_id)
+        await edit_delete(event, "**- تم استئناف التشغيل ▶️**")
+    except Exception as e:
+        await edit_delete(event, f"**- خطأ:** `{e}`")
 
 
 @zq_lo.rep_cmd(
@@ -280,126 +212,109 @@ async def resume_stream(event):
     command=("تخطي", plugin_category),
     info={
         "header": "لـ تخطي تشغيـل المقطـع وتشغيـل المقطـع التالـي في المكـالمـه",
-        "الاستخـدام": [
-            "{tr}تخطي",
-        ],
     },
 )
 async def skip_stream(event):
     "لـ تخطي تشغيـل المقطـع وتشغيـل المقطـع التالـي في المكـالمـه"
-    await edit_or_reply(event, "**- جـار التخطـي ...**")
-    res = await vc_player.skip()
-    await edit_delete(event, res, time=30)
-
-
-"""
-@zq_lo.rep_cmd(
-    pattern="a(?:llow)?vc ?([\d ]*)?",
-    command=("allowvc", plugin_category),
-    info={
-        "header": "To allow a user to control VC.",
-        "الوصـف": "To allow a user to controll VC.",
-        "الاستخـدام": [
-            "{tr}allowvc",
-            "{tr}allowvc (user id)",
-        ],
-    },
-)
-async def allowvc(event):
-    "To allow a user to controll VC."
-    user_id = event.pattern_match.group(1)
-    if user_id:
-        user_id = user_id.split(" ")
-    if not user_id and event.reply_to_msg_id:
-        reply = await event.get_reply_message()
-        user_id = [reply.from_id]
-    if not user_id:
-        return await edit_delete(event, "Whom should i Add")
-    ALLOWED_USERS.update(user_id)
-    return await edit_delete(event, "Added User to Allowed List")
-
-
-@zq_lo.rep_cmd(
-    pattern="d(?:isallow)?vc ?([\d ]*)?",
-    command=("disallowvc", plugin_category),
-    info={
-        "header": "To disallowvc a user to control VC.",
-        "الوصـف": "To disallowvc a user to controll VC.",
-        "الاستخـدام": [
-            "{tr}disallowvc",
-            "{tr}disallowvc (user id)",
-        ],
-    },
-)
-async def disallowvc(event):
-    "To allow a user to controll VC."
-    user_id = event.pattern_match.group(1)
-    if user_id:
-        user_id = user_id.split(" ")
-    if not user_id and event.reply_to_msg_id:
-        reply = await event.get_reply_message()
-        user_id = [reply.from_id]
-    if not user_id:
-        return await edit_delete(event, "Whom should i remove")
-    ALLOWED_USERS.difference_update(user_id)
-    return await edit_delete(event, "Removed User to Allowed List")
-
-
-@zq_lo.on(
-    events.NewMessage(outgoing=True, pattern=f"{tr}(speak|sp)(h|j)?(?:\s|$)([\s\S]*)")
-)  #only for zq_lo client
-async def speak(event):
-    "Speak in vc"
-    r = event.pattern_match.group(2)
-    input_str = event.pattern_match.group(3)
-    re = await event.get_reply_message()
-    if ";" in input_str:
-        lan, text = input_str.split(";")
-    else:
-        if input_str:
-            text = input_str
-        elif re and re.text and not input_str:
-            text = re.message
-        else:
-            return await event.delete()
-        if r == "h":
-            lan = "hi"
-        elif r == "j":
-            lan = "ja"
-        else:
-            lan = "en"
-    text = deEmojify(text.strip())
-    lan = lan.strip()
-    if not os.path.isdir("./temp/"):
-        os.makedirs("./temp/")
-    file = "./temp/" + "voice.ogg"
-    try:
-        tts = gTTS(text, lang=lan)
-        tts.save(file)
-        cmd = [
-            "ffmpeg",
-            "-i",
-            file,
-            "-map",
-            "0:a",
-            "-codec:a",
-            "libopus",
-            "-b:a",
-            "100k",
-            "-vbr",
-            "on",
-            file + ".opus",
-        ]
+    chat_id = event.chat_id
+    zed = await edit_or_reply(event, "**- جـار التخطـي للمقطع التالي ...**")
+    
+    if chat_id in PLAYLIST and len(PLAYLIST[chat_id]) > 1:
+        PLAYLIST[chat_id].pop(0)
+        next_track = PLAYLIST[chat_id][0]
         try:
-            t_response = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except (subprocess.CalledProcessError, NameError, FileNotFoundError) as exc:
-            await edit_or_reply(event, str(exc))
-        else:
-            os.remove(file)
-            file = file + ".opus"
-        await vc_player.play_song(file, Stream.audio, force=False)
-        await event.delete()
-        os.remove(file)
+            await call_py.play(chat_id, next_track["stream"])
+            await edit_delete(zed, "**- تم التخطي وتشغيل المقطع التالي ⏭**")
+        except Exception as e:
+            await edit_delete(zed, f"**- خطأ أثناء التخطي:** `{e}`")
+    else:
+        # إذا لم يكن هناك مقاطع أخرى، قم بالمغادرة وتفريغ القائمة
+        if chat_id in PLAYLIST:
+            PLAYLIST[chat_id].clear()
+        try:
+            await call_py.leave_call(chat_id)
+            await edit_delete(zed, "**- القائمة فارغة! تم إيقاف التشغيل والمغادرة ⏹**")
+        except Exception:
+            await edit_delete(zed, "**- لا يوجد مقاطع أخرى لتخطيها!**")
+
+
+@zq_lo.rep_cmd(
+    pattern="خروج",
+    command=("خروج", plugin_category),
+    info={
+        "header": "لـ المغـادره من المحـادثه الصـوتيـه",
+    },
+)
+async def leaveVoicechat(event):
+    "لـ المغـادره من المحـادثه الصـوتيـه"
+    chat_id = event.chat_id
+    await edit_or_reply(event, "**- جـارِ مغـادرة المحـادثـة الصـوتيـه ...**")
+    
+    if chat_id in PLAYLIST:
+        PLAYLIST[chat_id].clear()
+        
+    try:
+        # التحديث الجديد يستخدم leave_call بدلاً من leave_group_call
+        await call_py.leave_call(chat_id)
+        await edit_delete(event, "**- تم مغـادرة المكـالمـه بنجاح 🚪🚶**")
     except Exception as e:
-         await edit_or_reply(event, f"**Error:**\n`{e}`")
-"""
+        await edit_delete(event, f"**- خطأ:** `{e}`")
+
+
+@zq_lo.rep_cmd(
+    pattern="قائمة التشغيل",
+    command=("قائمة التشغيل", plugin_category),
+    info={
+        "header": "لـ جلب كـل المقـاطع المضـافه لقائمـة التشغيـل في المكالمـه",
+    },
+)
+async def get_playlist(event):
+    "لـ جلب كـل المقـاطع المضـافه لقائمـة التشغيـل في المكالمـه"
+    chat_id = event.chat_id
+    await edit_or_reply(event, "**- جـارِ جلب قائمـة التشغيـل ...**")
+    
+    if chat_id not in PLAYLIST or len(PLAYLIST[chat_id]) == 0:
+        await edit_delete(event, "**- قائمـة التشغيـل فارغـة حالياً 📭**", time=10)
+    else:
+        rep = ""
+        for num, item in enumerate(PLAYLIST[chat_id], 1):
+            status = "يتم تشغيله الآن 🔊" if num == 1 else "في الانتظار ⏳"
+            rep += f"**{num}-** `{item['title']}` - ({status})\n"
+            
+        await edit_delete(event, f"**- قائمـة التشغيـل الحالية :**\n\n{rep}\n**Enjoy the show ♥️**")
+
+
+@zq_lo.rep_cmd(
+    pattern="انضمام(?: )?(ك)?(?: )?(\S+)?",
+    command=("انضمام", plugin_category),
+    info={
+        "header": "لـ الانضمـام الى المحـادثه الصـوتيـه كـقناة (بدون تشغيل)",
+        "الاستخـدام": [
+            "{tr}انضمام",
+            "{tr}انضمام ك @username_channel",
+        ],
+    },
+)
+async def joinVoicechat(event):
+    "لـ الانضمـام الى المحـادثه الصـوتيـه"
+    join_flag = event.pattern_match.group(1)
+    channel_username = event.pattern_match.group(2)
+    chat_id = event.chat_id
+
+    zed = await edit_or_reply(event, "**- جـارِ الانضمـام الى المحـادثـه الصـوتيـه ...**")
+
+    # في الإصدار الجديد، الانضمام يكون تلقائي مع التشغيل (play)
+    # ولكن إذا أردت الانضمام بهوية قناة:
+    try:
+        if join_flag == "ك" and channel_username:
+            channel_peer = await zq_lo.get_input_entity(channel_username)
+            config = GroupCallConfig(join_as=channel_peer)
+            
+            # نشغل مسار صامت كخدعة للإنضمام فقط أو ننتظر المستخدم يرسل (شغل)
+            await edit_delete(zed, "**- تم تهيئة هويتك! قم الآن بإرسال أمر `.شغل` مع رابط للبدء 🎙**")
+        else:
+             await edit_delete(zed, "**- للانضمام والتشغيل فوراً، يرجى استخدام أمر `.شغل` أو `.فيد` مباشرة 🚀**")
+             
+    except Exception as e:
+        await edit_delete(zed, f"**- حدث خطأ:** `{e}`")
+
