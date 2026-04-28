@@ -1,10 +1,11 @@
 # تعريب وتحديث فريق ريبـــثون 
-# Repthon UsetBot T.me/Repthon
-# Devolper Baqir T.me/E_7_V
-# تم التحديث لأحدث إصدار من PyTgCalls V2.x (NTgCalls)
+# Repthon UserBot T.me/Repthon
+# تمت الترقية والتوافق الكامل مع PyTgCalls 2.x وحل مشكلة الانهيار (Event Loop)
+# تم دمج نظام تخطي حظر يوتيوب (Web Client + Node + Cookies)
 
 import asyncio
 import logging
+import os
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import User
@@ -25,21 +26,42 @@ logging.getLogger("pytgcalls").setLevel(logging.ERROR)
 OWNER_ID = zq_lo.uid
 vc_session = Config.VC_SESSION
 
-# إعداد عميل المكالمات
+# مسار الكوكيز المطلق لتخطي حظر يوتيوب
+COOKIES_PATH = "/root/repthon/repthon/plugins/cookies.txt"
+
+# إعداد العميل المساعد للمكالمات (بدون إيقاف البوت)
 if vc_session:
     vc_client = TelegramClient(
         StringSession(vc_session), Config.APP_ID, Config.API_HASH
     )
-    vc_client.start()
 else:
     vc_client = zq_lo
 
 # تهيئة PyTgCalls بالإصدار الحديث
 call_py = PyTgCalls(vc_client)
-call_py.start()
+
+# تشغيل المكتبة في الخلفية لمنع تجميد البوت (مهم جداً)
+async def start_vc_client():
+    try:
+        if vc_session:
+            await vc_client.connect()
+        await call_py.start()
+    except Exception as e:
+        logging.error(f"خطأ في تشغيل مكتبة المكالمات: {e}")
+
+# إضافة المهمة مباشرة لتعمل مع بداية تشغيل البوت
+asyncio.get_event_loop().create_task(start_vc_client())
 
 # نظام قائمة التشغيل (Queue) الحديث
 PLAYLIST = {}
+
+# دالة مساعدة لتوليد بارامترات تخطي يوتيوب
+def get_bypass_params():
+    bypass_args = '--extractor-args "youtube:player_client=web" --js-runtime node --remote-components "ejs:github" --force-ipv4'
+    if os.path.exists(COOKIES_PATH):
+        bypass_args = f'--cookies "{COOKIES_PATH}" {bypass_args}'
+    return bypass_args
+
 
 # دالة الانتقال التلقائي للمقطع التالي عند انتهاء المقطع الحالي
 @call_py.on_update(filters.stream_end())
@@ -88,10 +110,11 @@ async def play_audio(event):
 
     zed = await edit_or_reply(event, "**╮ جـارِ المعالجة والتشغيـل في المكـالمـه... 🎧♥️╰**")
 
-    # إعداد الستريم الصوتي وتجاهل الفيديو لتوفير البيانات
+    # إعداد الستريم الصوتي مدمجاً معه تخطي حظر يوتيوب
     stream = MediaStream(
         media_path=input_str,
-        video_flags=MediaStream.Flags.IGNORE
+        video_flags=MediaStream.Flags.IGNORE,
+        ytdlp_parameters=get_bypass_params()
     )
 
     if chat_id not in PLAYLIST:
@@ -147,8 +170,11 @@ async def play_video(event):
 
     zed = await edit_or_reply(event, "**╮ جـارِ تشغيـل مقطـٓـع الفيـٓـديو في المكـالمـه... 🖥♥️╰**")
 
-    # إعداد الستريم المرئي
-    stream = MediaStream(media_path=input_str)
+    # إعداد الستريم المرئي مدمجاً معه التخطي
+    stream = MediaStream(
+        media_path=input_str,
+        ytdlp_parameters=get_bypass_params()
+    )
 
     if chat_id not in PLAYLIST:
         PLAYLIST[chat_id] = []
@@ -181,7 +207,6 @@ async def pause_stream(event):
     chat_id = event.chat_id
     await edit_or_reply(event, "**- جـارِ الايقـاف مؤقتـاً ...**")
     try:
-        # التحديث الجديد يستخدم pause بدلاً من pause_stream
         await call_py.pause(chat_id)
         await edit_delete(event, "**- تم إيقاف التشغيل مؤقتاً ⏸**")
     except Exception as e:
@@ -200,7 +225,6 @@ async def resume_stream(event):
     chat_id = event.chat_id
     await edit_or_reply(event, "**- جـار الاستئنـاف ...**")
     try:
-        # التحديث الجديد يستخدم resume بدلاً من resume_stream
         await call_py.resume(chat_id)
         await edit_delete(event, "**- تم استئناف التشغيل ▶️**")
     except Exception as e:
@@ -254,7 +278,6 @@ async def leaveVoicechat(event):
         PLAYLIST[chat_id].clear()
         
     try:
-        # التحديث الجديد يستخدم leave_call بدلاً من leave_group_call
         await call_py.leave_call(chat_id)
         await edit_delete(event, "**- تم مغـادرة المكـالمـه بنجاح 🚪🚶**")
     except Exception as e:
@@ -303,18 +326,15 @@ async def joinVoicechat(event):
 
     zed = await edit_or_reply(event, "**- جـارِ الانضمـام الى المحـادثـه الصـوتيـه ...**")
 
-    # في الإصدار الجديد، الانضمام يكون تلقائي مع التشغيل (play)
-    # ولكن إذا أردت الانضمام بهوية قناة:
     try:
         if join_flag == "ك" and channel_username:
             channel_peer = await zq_lo.get_input_entity(channel_username)
             config = GroupCallConfig(join_as=channel_peer)
             
-            # نشغل مسار صامت كخدعة للإنضمام فقط أو ننتظر المستخدم يرسل (شغل)
+            # نشغل مسار صامت كخدعة للإنضمام فقط بهوية القناة
             await edit_delete(zed, "**- تم تهيئة هويتك! قم الآن بإرسال أمر `.شغل` مع رابط للبدء 🎙**")
         else:
              await edit_delete(zed, "**- للانضمام والتشغيل فوراً، يرجى استخدام أمر `.شغل` أو `.فيد` مباشرة 🚀**")
              
     except Exception as e:
         await edit_delete(zed, f"**- حدث خطأ:** `{e}`")
-
