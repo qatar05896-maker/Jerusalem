@@ -14,7 +14,7 @@ from ..helpers.utils import reply_id
 # اسـتـدعـاء مـحـرك الـتـحـمـيـل الـخـلـفـي
 from ..HSL.yt_api import YouTube
 
-plugin_category = "الـبـحـث"
+plugin_category = "utils"
 extractor = URLExtract()
 
 @zq_lo.rep_cmd(pattern="(تحميل فيديو|فيس|انستا|سناب|تيك|بنترست|فيسبوك)(?: |$)(.*)")
