@@ -7,12 +7,10 @@ from pytgcalls.exceptions import (
     AlreadyJoinedError,
     NoActiveGroupCall,
     NodeJSNotInstalled,
-    NotInCallError, # تم تحديث اسم الخطأ هنا ليتوافق مع V2
+    NotInCallError,
     TooOldNodeJSVersion,
 )
-from pytgcalls.types.input_stream import AudioPiped, AudioVideoPiped
-from pytgcalls.types.input_stream.quality import HighQualityAudio, HighQualityVideo
-from pytgcalls.types import GroupCallConfig
+from pytgcalls.types import MediaStream, GroupCallConfig
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 from yt_dlp import YoutubeDL
@@ -57,13 +55,10 @@ class RepVC:
             config = None
             
         try:
-            # استخدام AudioPiped بالإصدار الحديث بدون StreamType
-            stream = AudioPiped("baqir/baqir/Silence01s.mp3", HighQualityAudio())
+            # استخدام MediaStream بالإصدار الحديث
+            stream = MediaStream("baqir/baqir/Silence01s.mp3", video_flags=MediaStream.Flags.IGNORE)
             
-            if config:
-                await self.app.join_group_call(chat.id, stream, config=config)
-            else:
-                await self.app.join_group_call(chat.id, stream)
+            await self.app.play(chat.id, stream)
         except NoActiveGroupCall:
             try:
                 await self.client(
@@ -78,7 +73,7 @@ class RepVC:
         except (NodeJSNotInstalled, TooOldNodeJSVersion):
             return "- آخـر اصـدار من NodeJs لم يتـم تحميلـه ...؟!"
         except AlreadyJoinedError:
-            await self.app.leave_group_call(chat.id)
+            await self.app.leave_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
             
@@ -88,8 +83,8 @@ class RepVC:
 
     async def leave_vc(self):
         try:
-            await self.app.leave_group_call(self.CHAT_ID)
-        except (NotInCallError, NoActiveGroupCall): # NotInCallError بدلاً من القديمة
+            await self.app.leave_call(self.CHAT_ID)
+        except (NotInCallError, NoActiveGroupCall):
             pass
         self.CHAT_NAME = None
         self.CHAT_ID = None
@@ -146,7 +141,6 @@ class RepVC:
             return f"- جـارِ تشغيـل {title}"
 
     async def handle_next(self, update):
-        # تم تعديلها لتتوافق مع طريقة الأحداث الجديدة
         await self.skip()
 
     async def skip(self, clear=False):
@@ -155,21 +149,21 @@ class RepVC:
 
         if not self.PLAYLIST:
             if self.PLAYING:
-                await self.app.change_stream(
+                await self.app.play(
                     self.CHAT_ID,
-                    AudioPiped("baqir/baqir/Silence01s.mp3", HighQualityAudio()),
+                    MediaStream("baqir/baqir/Silence01s.mp3", video_flags=MediaStream.Flags.IGNORE),
                 )
             self.PLAYING = False
             return "- التخطـي:\nقائمـة الشغيـل فارغـه ؟!"
 
         next = self.PLAYLIST.pop(0)
         if next["stream"] == Stream.audio:
-            streamable = AudioPiped(next["path"], HighQualityAudio())
+            streamable = MediaStream(next["path"], video_flags=MediaStream.Flags.IGNORE)
         else:
-            streamable = AudioVideoPiped(next["path"], HighQualityAudio(), HighQualityVideo())
+            streamable = MediaStream(next["path"])
             
         try:
-            await self.app.change_stream(self.CHAT_ID, streamable)
+            await self.app.play(self.CHAT_ID, streamable)
         except Exception:
             await self.skip()
             
@@ -180,7 +174,7 @@ class RepVC:
         if not self.PLAYING:
             return "لايـوجـد شـي لـ الايقـاف ؟!"
         if not self.PAUSED:
-            await self.app.pause_stream(self.CHAT_ID)
+            await self.app.pause(self.CHAT_ID)
             self.PAUSED = True
             
         return f"تم التمهـل في {self.CHAT_NAME}"
@@ -189,7 +183,7 @@ class RepVC:
         if not self.PLAYING:
             return "لايـوجـد شـي لـ الاستئنـاف ؟!"
         if self.PAUSED:
-            await self.app.resume_stream(self.CHAT_ID)
+            await self.app.resume(self.CHAT_ID)
             self.PAUSED = False
             
         return f"تم الاستئنـاف في {self.CHAT_NAME}"
