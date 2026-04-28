@@ -3,7 +3,12 @@ import os
 import random
 from typing import Optional
 
-from moviepy.editor import VideoFileClip
+# التعديل الأول: دعم أحدث إصدارات moviepy (2.0+) مع الحفاظ على التوافق القديم
+try:
+    from moviepy import VideoFileClip
+except ImportError:
+    from moviepy.editor import VideoFileClip
+
 from PIL import Image, ImageOps
 
 from ...core.logger import logging
@@ -12,14 +17,23 @@ from ..utils.utils import runcmd
 LOGS = logging.getLogger(__name__)
 
 
-
 async def vid_to_gif(inputfile, outputfile, speed=None, starttime=None, endtime=None):
     try:
         clip = VideoFileClip(inputfile)
         if starttime is not None and endtime is not None:
-            clip = clip.subclip(int(starttime), int(endtime))
+            # التعديل الثاني: استدعاء التقطيع الحديث أو القديم
+            if hasattr(clip, "subclipped"):
+                clip = clip.subclipped(int(starttime), int(endtime))
+            else:
+                clip = clip.subclip(int(starttime), int(endtime))
+        
         if speed is not None:
-            clip = clip.speedx(float(speed))
+            # التعديل الثالث: استدعاء تسريع الفيديو الحديث أو القديم
+            if hasattr(clip, "with_speed_multiplied"):
+                clip = clip.with_speed_multiplied(float(speed))
+            else:
+                clip = clip.speedx(float(speed))
+                
         clip.write_gif(outputfile, logger=None)
         return outputfile
     except Exception as e:
@@ -67,7 +81,10 @@ async def ud_frames(image, w, h, outframes, flip=False):
 
 
 async def spin_frames(image, w, h, outframes):
-    image.thumbnail((512, 512), Image.ANTIALIAS)
+    # التعديل الرابع: تفادي خطأ Image.ANTIALIAS المحذوف في إصدارات Pillow 10+
+    resample_filter = getattr(Image, "Resampling", Image).LANCZOS if hasattr(Image, "Resampling") else Image.ANTIALIAS
+    image.thumbnail((512, 512), resample_filter)
+    
     img = Image.new("RGB", (512, 512), "black")
     img.paste(image, ((512 - w) // 2, (512 - h) // 2))
     image = img
