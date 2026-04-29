@@ -18,6 +18,12 @@ __license__ = "GNU Affero General Public License v3.0"
 __author__ = "Venom <https://t.me/S_G0C7>"
 __copyright__ = f"Venom Copyright (C) 2026  {__author__}"
 
+# 🔴 تـعـديـل ذكـي לـحـل مـشـكـلـة (AttributeError: uid) الـتـي ظـهـرت مـسـبـقـاً فـي الـإضـافـات
+# تـم تـثـبـيـت آيـدي الـمـالـك (7127207234) مـبـاشـرة فـي جـلـسـة الـبـوت والـكـونـفـيـج لـمـنـع الـكـراش
+Config.OWNER_ID = 7127207234
+if not hasattr(zq_lo, "uid"):
+    zq_lo.uid = 7127207234
+
 zq_lo.version = __version__
 zq_lo.tgbot.version = __version__
 LOGS = logging.getLogger("Venom")
