@@ -1,5 +1,5 @@
 # 1. استخدام نسخة Python 3.11 المستقرة
-FROM python:3.11-slim-bullseye
+FROM python:3.11
 
 # 2. تثبيت الأدوات الأساسية (System Dependencies)
 RUN apt-get update && apt-get install -y --no-install-recommends \
