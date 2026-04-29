@@ -1,9 +1,11 @@
 # Venom Userbot
 # Copyright (C) 2026 Abdullah (Venom). All Rights Reserved
 # الـمـالـك: @S_G0C7
-# أوامــر الـمـكـالـمـات والـتـشـغـيـل
+# أوامــر الـمـكـالـمـات والـتـشـغـيـل (مـحـدث 2026 - بـحـث ذكـي)
 
 import asyncio
+import os
+from urlextract import URLExtract
 from repthon import zq_lo
 from ..core.managers import edit_delete, edit_or_reply
 from ..helpers.utils import reply_id
@@ -11,38 +13,79 @@ from ..helpers.utils import reply_id
 # اسـتـدعـاء مـحـرك الـمـكـالـمـات
 from ..HSL.call_engine import CallEngine
 
-plugin_category = "الـمـكـالـمـات"
+plugin_category = "utils" # تـم الـتـعـديـل لـيـعـمـل بـدون كـراش
+extractor = URLExtract()
 
 # تـهـيـئـة الـمـحـرك
 VC = CallEngine(zq_lo)
 zq_lo.loop.create_task(VC.start())
 
+async def get_stream_info(query: str):
+    """دالـة ذكـيـة لـتـحـويـل نـص الـبـحـث إلـى رابـط وعـنـوان حـقـيـقـي"""
+    urls = extractor.find_urls(query)
+    if urls:
+        return urls[0], "مـقـطـع مـن رابـط"
+    
+    import yt_dlp
+    from ..HSL.yt_api import COOKIES_PATH
+    opts = {"extract_flat": True, "quiet": True, "noplaylist": True}
+    if os.path.exists(COOKIES_PATH): opts["cookiefile"] = COOKIES_PATH
+    
+    def _search():
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(f"ytsearch1:{query}", download=False)
+            
+    try:
+        results = await asyncio.get_event_loop().run_in_executor(None, _search)
+        if results and results.get("entries"):
+            entry = results["entries"][0]
+            return entry.get("url"), entry.get("title")
+    except Exception:
+        pass
+    return None, None
+
 
 @zq_lo.rep_cmd(pattern="شغل(?: |$)(.*)")
 async def play_audio_cmd(event):
     """تـشـغـيـل صـوتـي فـي الـمـكـالـمـة"""
-    input_str = event.pattern_match.group(1)
-    if not input_str and not event.reply_to_msg_id:
-        return await edit_delete(event, "**⤶ يـرجـى إدراج رابـط أو الـرد عـلـى مـقـطـع لـلـتـشـغـيـل**")
+    query = event.pattern_match.group(1)
+    if not query and not event.reply_to_msg_id:
+        return await edit_delete(event, "**⤶ يـرجـى كـتـابـة اسـم الـأغـنـيـة أو إدراج رابـط لـلـتـشـغـيـل**")
     
-    # إذا كـان الـرد عـلـى مـلـف صـوتـي بـدون رابـط (سـنـضـيـف دعـم الـتـحـمـيـل الـمـحـلـي لـاحـقـاً)
-    if not input_str:
-        return await edit_delete(event, "**⤶ حـالـيـاً يـدعـم الـتـشـغـيـل بـالـروابـط، يـرجـى إرفـاق رابـط.**")
+    if not query and event.reply_to_msg_id:
+        query = (await event.get_reply_message()).text
+        if not query:
+            return await edit_delete(event, "**⤶ يـرجـى الـرد عـلـى نـص أو إدراج رابـط يـوتـيـوب.**")
 
-    zed = await edit_or_reply(event, "**⪼ جـارِ مـعـالـجـة الـطـلـب وبـدء الـتـشـغـيـل ...**")
-    res = await VC.play_or_queue(event.chat_id, input_str, "مـقـطـع صـوتـي", is_video=False)
+    zed = await edit_or_reply(event, "**⪼ جـارِ الـبـحـث وتـجـهـيـز الـتـشـغـيـل ... 🎧**")
+    
+    url, title = await get_stream_info(query)
+    if not url:
+        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد:** `{query}`")
+
+    res = await VC.play_or_queue(event.chat_id, url, title, is_video=False)
     await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
 
 
 @zq_lo.rep_cmd(pattern="فيد(?: |$)(.*)")
 async def play_video_cmd(event):
     """تـشـغـيـل فـيـديـو فـي الـمـكـالـمـة"""
-    input_str = event.pattern_match.group(1)
-    if not input_str:
-        return await edit_delete(event, "**⤶ يـرجـى إدراج رابـط لـتـشـغـيـل الـفـيـديـو**")
+    query = event.pattern_match.group(1)
+    if not query and not event.reply_to_msg_id:
+        return await edit_delete(event, "**⤶ يـرجـى كـتـابـة اسـم الـفـيـديـو أو إدراج رابـط لـتـشـغـيـلـه**")
     
-    zed = await edit_or_reply(event, "**⪼ جـارِ تـجـهـيـز بـث الـفـيـديـو بـأعـلـى جـودة ...**")
-    res = await VC.play_or_queue(event.chat_id, input_str, "بـث مـرئـي", is_video=True)
+    if not query and event.reply_to_msg_id:
+        query = (await event.get_reply_message()).text
+        if not query:
+            return await edit_delete(event, "**⤶ يـرجـى الـرد عـلـى نـص أو إدراج رابـط يـوتـيـوب.**")
+
+    zed = await edit_or_reply(event, "**⪼ جـارِ الـبـحـث وتـجـهـيـز بـث الـفـيـديـو بـأعـلـى جـودة ... 🎬**")
+    
+    url, title = await get_stream_info(query)
+    if not url:
+        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد:** `{query}`")
+
+    res = await VC.play_or_queue(event.chat_id, url, title, is_video=True)
     await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
 
 
