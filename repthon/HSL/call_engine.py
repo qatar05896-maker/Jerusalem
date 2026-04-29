@@ -35,6 +35,14 @@ def LOGGER(name): return logging.getLogger(name)
 class CallEngine:
     def __init__(self, client):
         self.client = client
+        
+        # -----------------------------------------------------------------
+        # تـرقـيـة 2026: خـداع مـكـتـبـة PyTgCalls لـتـقـبـل الـيـوزربـوت الـمـعـدل
+        # إجـبـار دالـة الـفـحـص (package_name) عـلـى إرجـاع 'telethon' دائـمـاً
+        from pytgcalls.mtproto.bridged_client import BridgedClient
+        BridgedClient.package_name = lambda c: 'telethon'
+        # -----------------------------------------------------------------
+        
         self.app = PyTgCalls(client)
         self.queue: dict[int, list] = {}
         self.chat_locks: dict[int, Lock] = {}
