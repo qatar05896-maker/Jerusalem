@@ -1,6 +1,3 @@
-# Venom Userbot - @S_G0C7
-# محرك البحث والتحميل الذكي الشامل (نسخة 2026 - زراير + جودات ذكية)
-
 import os
 import asyncio
 import re
