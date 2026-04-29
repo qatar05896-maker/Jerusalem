@@ -58,12 +58,12 @@ async def install_pip_packages(packages):
 
 def run_async(func: callable):
     """Run async functions with the right event loop."""
-    asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()
     return loop.run_until_complete(func)
 
 
 async def restart_script(client: TelegramClient, sandy):
-    """Restart the current script."""
+    """Restart the current script (Fly.io Compatible)."""
     try:
         ulist = get_collectionlist_items()
         for i in ulist:
@@ -75,10 +75,10 @@ async def restart_script(client: TelegramClient, sandy):
         add_to_collectionlist("restart_update", [sandy.chat_id, sandy.id])
     except Exception as e:
         LOGS.error(e)
-    executable = sys.executable.replace(" ", "\\ ")
-    args = [executable, "-m", "repthon"]
-    os.execle(executable, *args, os.environ)
-    os._exit(143)
+        
+    # 🔴 التعديل لبيئة Fly.io: استخدام sys.exit بدلاً من os.execle لضمان إعادة تشغيل الحاوية (Container) بالكامل
+    LOGS.info("جاري إعادة تشغيل السيرفر...")
+    sys.exit(143)
 
 
 async def get_message_link(client, event):
