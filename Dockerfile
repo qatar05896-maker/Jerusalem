@@ -1,7 +1,7 @@
-# 1. استخدام نسخة سريعة ومستقرة
-FROM python:3.11
+# 1. استخدام نسخة Python 3.11 المستقرة
+FROM python:3.11-slim-bullseye
 
-# 2. تثبيت الأدوات الأساسية دفعة واحدة (شاملة Node.js وأدوات الميديا)
+# 2. تثبيت الأدوات الأساسية (System Dependencies)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -10,31 +10,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     build-essential \
     imagemagick \
+    libmagic-dev \
+    libffi-dev \
+    libssl-dev \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm i -g npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. تحديد مسار العمل
 WORKDIR /root/repthon
 
-# 4. السلاح السري (أداة uv) لتسطيب المكاتب بسرعة البرق
+# 4. تسطيب أداة uv للسرعة القصوى
 RUN pip install --no-cache-dir uv
 
-# 5. التريك الذكي: نسخ ملف المتطلبات فقط أولاً
+# 5. نسخ ملف المتطلبات
 COPY requirements.txt .
 
-# 6. تسطيب المكاتب بصاروخ الـ uv (مع إجبار تحديث yt-dlp لأحدث إصدار لحل مشكلة يوتيوب)
-RUN sed -i 's/py-tgcalls==1.0.1/py-tgcalls==2.2.8/g' requirements.txt && \
-    uv pip install --system --no-cache -r requirements.txt && \
+# 6. تسطيب المكاتب (تم إزالة أي إشارة لـ py-tgcalls من هنا)
+RUN uv pip install --system --no-cache -r requirements.txt && \
     uv pip install --system --no-cache --upgrade yt-dlp
 
-# 7. نسخ باقي ملفات البوت
+# 7. نسخ باقي ملفات السورس
 COPY . .
 
-# 8. ضبط مسار البيئة بشكل صحيح
+# 8. ضبط البيئة والمتغيرات
 ENV PATH="/root/repthon/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
 
 # 9. تشغيل البوت
-CMD ["/bin/bash", "-c", "cp exampleconfig.py config.py && python3 -m repthon"]
+CMD ["/bin/bash", "-c", "cp -n exampleconfig.py config.py || true && python3 -m repthon"]
