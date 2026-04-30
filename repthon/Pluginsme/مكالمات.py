@@ -1,4 +1,7 @@
-# Venom Userbot - Call Controller (Web Client - Fixed 2026)
+# Venom Userbot - Call Controller (Web Client - Fixed)
+# Copyright (C) 2026 Abdullah (Venom). All Rights Reserved
+# الـمـالـك: @S_G0C7
+
 import asyncio
 import os
 from pathlib import Path
@@ -26,26 +29,33 @@ VC = CallEngine(zq_lo)
 zq_lo.loop.create_task(VC.start())
 
 # ==========================================
-# 1. دالة جلب رابط البث (معدلة – عميل ويب نقي)
+# 1. دالة جلب رابط البث (تم إصلاحها)
 # ==========================================
 async def get_stream_info(query: str, is_video: bool = False) -> Tuple[Optional[str], Optional[str]]:
-    """ترجع (direct_url, title) من يوتيوب باستخدام عميل web فقط"""
+    """جلب رابط البث المباشر من يوتيوب – عميل web مع دعم كامل لتحديات JS"""
     if urls := extractor.find_urls(query):
         search_query = urls[0]
     else:
         search_query = f"ytsearch1:{query}"
 
-    # ✅ الصيغ نفس اللي في الملف الشغال: ba/b للصوت، b للفيديو
-    fmt = "b" if is_video else "ba/b"
+    # تحديد الصيغة المناسبة
+    fmt = "bestvideo+bestaudio/best" if is_video else "bestaudio/best"
 
     opts = {
         "format": fmt,
         "quiet": True,
         "noplaylist": True,
         "no_warnings": True,
+        "nocheckcertificate": True,
         "force_ipv4": True,
         "source_address": "0.0.0.0",
-        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "js_runtimes": {"node": {}},
+        "remote_components": ["ejs:github"],
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["web"]
+            }
+        },
         "cookiefile": str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
     }
 
@@ -65,7 +75,6 @@ async def get_stream_info(query: str, is_video: bool = False) -> Tuple[Optional[
     except Exception as e:
         print(f"Stream Info Error: {e}")
         return None, None
-
 
 # ==========================================
 # 2. أوامر التشغيل
@@ -131,7 +140,7 @@ async def play_video_cmd(event):
 
 
 # ==========================================
-# 3. أوامر التحكم
+# 3. أوامر التحكم في المكالمة
 # ==========================================
 @zq_lo.rep_cmd(pattern="توقف(?: |$)(.*)")
 async def pause_cmd(event):
