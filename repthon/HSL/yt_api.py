@@ -12,14 +12,14 @@ from concurrent.futures import ThreadPoolExecutor
 logging.basicConfig(level=logging.ERROR)
 def LOGGER(name): return logging.getLogger(name)
 
-# تـحـديـد الـمـسـارات بـشـكـل مـطـلـق مـن جـذر الـمـشـروع
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-COOKIES_PATH = os.path.join(BASE_DIR, "plugins", "cookies.txt")
+# تـعـديـل هـام: وضـع مـسـار الـكـوكـيـز بـشـكـل ثـابـت وصـريـح حـسـب مـسـار الـسـيـرفـر الـصـحـيـح
+COOKIES_PATH = "/root/repthon/repthon/plugins/cookies.txt"
 
 # اسـتـغـلال مـسـاحـة الـرام لـلـتـحـمـيـل الـسـريـع (إذ كـانـت مـتـاحـة بـيـئـة لـيـنـكـس)
 if os.path.exists("/dev/shm"):
     DOWNLOAD_PATH = "/dev/shm/RepthonDownloads"
 else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     DOWNLOAD_PATH = os.path.join(BASE_DIR, "temp_downloads")
 
 if not os.path.exists(DOWNLOAD_PATH):
