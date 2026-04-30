@@ -4,6 +4,7 @@
 # محرك المكالمات والتشغيل | Modern Python 3.11+ Architecture
 
 import asyncio
+import os
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -11,16 +12,21 @@ import yt_dlp
 from urlextract import URLExtract
 
 from repthon import zq_lo
-from ..core.managers import edit_delete, edit_or_reply
-from ..helpers.utils import reply_id
-from ..HSL.call_engine import CallEngine
+# تم استخدام الاستدعاء المباشر لتجنب أخطاء المسارات
+from repthon.core.managers import edit_delete, edit_or_reply
+from repthon.helpers.utils import reply_id
+from repthon.HSL.call_engine import CallEngine
 
 # ==========================================
 # 0. الإعدادات الحديثة
 # ==========================================
 plugin_category = "utils"
 extractor = URLExtract()
+
+# مسارات الملفات
 COOKIES_PATH = Path("repthon/plugins/cookies.txt")
+TEMP_DIR = Path("temp")
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 # تـهـيـئـة الـمـحـرك
 VC = CallEngine(zq_lo)
@@ -47,7 +53,6 @@ async def get_stream_info(query: str) -> Tuple[Optional[str], Optional[str]]:
             return ydl.extract_info(f"ytsearch1:{query}", download=False)
             
     try:
-        # الطريقة العصرية والسريعة للبحث في الخلفية
         results = await asyncio.to_thread(_search)
         if results and (entries := results.get("entries")):
             return entries[0].get("url"), entries[0].get("title")
@@ -56,19 +61,31 @@ async def get_stream_info(query: str) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 # ==========================================
-# 2. أوامر التشغيل المباشرة
+# 2. أوامر التشغيل المباشرة (تدعم الملفات)
 # ==========================================
 
 @zq_lo.rep_cmd(pattern="شغل(?: |$)(.*)")
 async def play_audio_cmd(event):
-    """تـشـغـيـل صـوتـي فـي الـمـكـالـمـة بـأعـلـى جـودة"""
+    """تـشـغـيـل صـوتـي فـي الـمـكـالـمـة مـن بـحـث يـوتـيـوب أو مـلـف مـحـلـي"""
     reply = await event.get_reply_message()
-    # استخدام Walrus للتحقق وجلب النص في نفس الوقت
-    if not (query := event.pattern_match.group(1).strip() or (reply.text if reply else "")):
-        return await edit_delete(event, "**⤶ يـرجـى كـتـابـة اسـم الـأغـنـيـة أو إدراج رابـط لـلـتـشـغـيـل**")
-
-    zed = await edit_or_reply(event, "**⪼ جـارِ الـبـحـث والـتـشـغـيـل ... 🎧**")
+    query = event.pattern_match.group(1).strip()
     
+    zed = await edit_or_reply(event, "**⪼ جـارِ الـمـعـالـجـة والـتـشـغـيـل ... 🎧**")
+    
+    # 1. التحقق من وجود ملف صوتي في الرد
+    if reply and reply.media and hasattr(reply.media, 'document'):
+        if "audio" in reply.file.mime_type or "ogg" in reply.file.mime_type:
+            await zed.edit("**⪼ جـارِ تـنـزيـل الـمـلـف الـصـوتـي لـرفـعـه لـلـمـكـالـمـة ... ⏳**")
+            file_path = await reply.download_media(str(TEMP_DIR))
+            title = reply.file.name or "مـقـطـع صـوتـي (مـلـف)"
+            res = await VC.play_or_queue(event.chat_id, file_path, title, is_video=False)
+            return await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
+
+    # 2. إذا لم يكن ملفاً، يتم البحث كنص
+    query = query or (reply.text if reply else "")
+    if not query:
+        return await zed.edit("**⤶ يـرجـى كـتـابـة اسـم الـأغـنـيـة، إدراج رابـط، أو الـرد عـلـى مـلـف صـوتـي 𓆰.**")
+
     url, title = await get_stream_info(query)
     if not url:
         return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد:** `{query}`")
@@ -79,12 +96,25 @@ async def play_audio_cmd(event):
 
 @zq_lo.rep_cmd(pattern="فيد(?: |$)(.*)")
 async def play_video_cmd(event):
-    """تـشـغـيـل فـيـديـو فـي الـمـكـالـمـة"""
+    """تـشـغـيـل فـيـديـو فـي الـمـكـالـمـة مـن بـحـث يـوتـيـوب أو مـلـف مـحـلـي"""
     reply = await event.get_reply_message()
-    if not (query := event.pattern_match.group(1).strip() or (reply.text if reply else "")):
-        return await edit_delete(event, "**⤶ يـرجـى كـتـابـة اسـم الـفـيـديـو أو إدراج رابـط لـتـشـغـيـلـه**")
+    query = event.pattern_match.group(1).strip()
 
     zed = await edit_or_reply(event, "**⪼ جـارِ تـجـهـيـز بـث الـفـيـديـو ... 🎬**")
+    
+    # 1. التحقق من وجود فيديو في الرد
+    if reply and reply.media and hasattr(reply.media, 'document'):
+        if "video" in reply.file.mime_type:
+            await zed.edit("**⪼ جـارِ تـنـزيـل الـفـيـديـو لـرفـعـه لـلـمـكـالـمـة ... ⏳**")
+            file_path = await reply.download_media(str(TEMP_DIR))
+            title = reply.file.name or "مـقـطـع فـيـديـو (مـلـف)"
+            res = await VC.play_or_queue(event.chat_id, file_path, title, is_video=True)
+            return await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
+
+    # 2. البحث النصي
+    query = query or (reply.text if reply else "")
+    if not query:
+        return await zed.edit("**⤶ يـرجـى كـتـابـة اسـم الـفـيـديـو، إدراج رابـط، أو الـرد عـلـى مـلـف فـيـديـو 𓆰.**")
     
     url, title = await get_stream_info(query)
     if not url:
@@ -132,7 +162,6 @@ async def list_cmd(event):
         return await edit_delete(event, "**⤶ الـطـابـور فـارغ حـالـيـاً 📭**")
     
     msg = "**• قـائـمـة الـتـشـغـيـل الـحـالـيـة ↶**\n\n"
-    # طريقة حديثة وسريعة لدمج النصوص (Generator Expression)
     msg += "".join(
         f"**{i}-** `{track['title']}` - ({'يـعـمـل الـآن 🔊' if i == 1 else 'فـي الـانـتـظـار ⏳'})\n"
         for i, track in enumerate(playlist, 1)
