@@ -75,7 +75,8 @@ async def venom_download(url: str, mode: str) -> tuple[Path | None, Path | None,
     is_ultra = bool(gvarstatus("VENOM_ULTRA_HQ"))
     
     if mode == "audio":
-        fmt = "ba[ext=m4a]/bestaudio/best"
+        # تم حذف /best لمنع التحميل كفيديو عند فشل الصوت
+        fmt = "ba[ext=m4a]/bestaudio"
         ext = "m4a"
     else:
         fmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best" if is_ultra else "bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best"
