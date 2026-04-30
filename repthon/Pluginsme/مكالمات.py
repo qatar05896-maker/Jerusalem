@@ -23,8 +23,8 @@ from repthon.HSL.call_engine import CallEngine
 plugin_category = "utils"
 extractor = URLExtract()
 
-# مسارات الملفات
-COOKIES_PATH = Path("repthon/plugins/cookies.txt")
+# مسارات الملفات (نفس المسار الصحيح الذي نجح في التخطي)
+COOKIES_PATH = Path("/root/repthon/repthon/plugins/cookies.txt")
 TEMP_DIR = Path("temp")
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -36,29 +36,48 @@ zq_lo.loop.create_task(VC.start())
 # 1. دوال البحث والذكاء الاصطناعي
 # ==========================================
 
-async def get_stream_info(query: str) -> Tuple[Optional[str], Optional[str]]:
-    """دالة ذكية لجلب روابط البث باستخدام asyncio.to_thread الحديثة"""
+async def get_stream_info(query: str, is_video: bool = False) -> Tuple[Optional[str], Optional[str]]:
+    """دالة ذكية لجلب روابط البث بناءً على نوع التشغيل (صوت أو فيديو)"""
     if urls := extractor.find_urls(query):
-        return urls[0], "مـقـطـع مـن رابـط مـبـاشـر"
+        search_query = urls[0]
+        is_url = True
+    else:
+        search_query = f"ytsearch1:{query}"
+        is_url = False
+    
+    # تحديد الصيغة (الصوت فقط أو الفيديو) لضمان توافق البث مع pytgcalls
+    fmt = "best" if is_video else "bestaudio/best"
     
     opts = {
-        "extract_flat": True, 
+        "format": fmt,
         "quiet": True, 
         "noplaylist": True,
+        "no_warnings": True,
+        "force_ipv4": True,
+        "source_address": "0.0.0.0",
+        "js_runtimes": {"node": {}},
+        "remote_components": ["ejs:github"],
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
         "cookiefile": str(COOKIES_PATH) if COOKIES_PATH.exists() else None
     }
     
     def _search():
         with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(f"ytsearch1:{query}", download=False)
+            res = ydl.extract_info(search_query, download=False)
+            if res:
+                if 'entries' in res and res['entries']:
+                    entry = res['entries'][0]
+                else:
+                    entry = res
+                # إرجاع رابط البث الفعلي (url) وليس رابط صفحة الويب
+                return entry.get("url"), entry.get("title")
+            return None, None
             
     try:
-        results = await asyncio.to_thread(_search)
-        if results and (entries := results.get("entries")):
-            return entries[0].get("url"), entries[0].get("title")
-    except Exception:
-        pass
-    return None, None
+        return await asyncio.to_thread(_search)
+    except Exception as e:
+        print(f"Stream Info Error: {e}")
+        return None, None
 
 # ==========================================
 # 2. أوامر التشغيل المباشرة (تدعم الملفات)
@@ -86,9 +105,10 @@ async def play_audio_cmd(event):
     if not query:
         return await zed.edit("**⤶ يـرجـى كـتـابـة اسـم الـأغـنـيـة، إدراج رابـط، أو الـرد عـلـى مـلـف صـوتـي 𓆰.**")
 
-    url, title = await get_stream_info(query)
+    # إرسال is_video=False لضمان استخراج رابط صوتي فقط
+    url, title = await get_stream_info(query, is_video=False)
     if not url:
-        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد:** `{query}`")
+        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد أو تـشـغـيـل:** `{query}`")
 
     res = await VC.play_or_queue(event.chat_id, url, title, is_video=False)
     await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
@@ -116,9 +136,10 @@ async def play_video_cmd(event):
     if not query:
         return await zed.edit("**⤶ يـرجـى كـتـابـة اسـم الـفـيـديـو، إدراج رابـط، أو الـرد عـلـى مـلـف فـيـديـو 𓆰.**")
     
-    url, title = await get_stream_info(query)
+    # إرسال is_video=True لضمان استخراج رابط فيديو
+    url, title = await get_stream_info(query, is_video=True)
     if not url:
-        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد:** `{query}`")
+        return await zed.edit(f"**⤶ لـم أسـتـطـع إيـجـاد أو تـشـغـيـل:** `{query}`")
 
     res = await VC.play_or_queue(event.chat_id, url, title, is_video=True)
     await zed.edit(f"{res}\n**• الـمـالـك ↶ @S_G0C7**")
