@@ -12,9 +12,10 @@ from telethon.tl.types import DocumentAttributeAudio
 from urlextract import URLExtract
 
 from repthon import zq_lo
-from ..core.managers import edit_delete, edit_or_reply
-from ..helpers.utils import reply_id
-from ..sql_helper.globals import addgvar, gvarstatus, delgvar
+# تم تحويل الاستدعاءات إلى مباشرة (Absolute Imports) لتجنب أخطاء المسارات
+from repthon.core.managers import edit_delete, edit_or_reply
+from repthon.helpers.utils import reply_id
+from repthon.sql_helper.globals import addgvar, gvarstatus, delgvar
 
 # ==========================================
 # 0. الإعدادات الحديثة (Modern Configs)
